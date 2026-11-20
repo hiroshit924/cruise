@@ -1,0 +1,49 @@
+<?php
+/** C365 Cruise theme setup. */
+if (!defined('ABSPATH')) { exit; }
+function cruise_setup() {
+    load_theme_textdomain('cruise', get_template_directory() . '/languages');
+    add_theme_support('title-tag');
+    add_theme_support('post-thumbnails');
+    add_theme_support('custom-logo', array('height' => 100, 'width' => 420, 'flex-height' => true, 'flex-width' => true));
+    add_theme_support('html5', array('search-form', 'comment-form', 'comment-list', 'gallery', 'caption', 'style', 'script'));
+    add_theme_support('responsive-embeds');
+    add_theme_support('automatic-feed-links');
+    register_nav_menus(array('footer' => 'フッターメニュー（規約・プライバシーなど）'));
+}
+add_action('after_setup_theme', 'cruise_setup');
+function cruise_assets() {
+    wp_enqueue_style('cruise', get_stylesheet_uri(), array(), wp_get_theme()->get('Version'));
+    wp_enqueue_script('cruise', get_template_directory_uri() . '/assets/main.js', array(), '1.0.0', true);
+}
+add_action('wp_enqueue_scripts', 'cruise_assets');
+add_action('customize_register', function ($customizer) {
+    $customizer->add_section('cruise_options', array('title' => 'クルーズ設定', 'priority' => 30));
+    $customizer->add_setting('cruise_hero', array('sanitize_callback' => 'esc_url_raw'));
+    $customizer->add_control(new WP_Customize_Image_Control($customizer, 'cruise_hero', array(
+        'label' => 'メイン写真', 'section' => 'cruise_options',
+    )));
+});
+function cruise_icon($name, $class = '') {
+    $paths = array('arrow' => '<path d="M5 12h14m-5-5 5 5-5 5"/>', 'pin' => '<path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/>', 'heart' => '<path d="m12 21-8-8C-3 6 6-2 12 5c6-7 15 1 8 8Z"/>', 'people' => '<circle cx="9" cy="8" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 5a3 3 0 0 1 0 6m2 3a6 6 0 0 1 3 5v2"/>', 'star' => '<path d="m12 2 3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1Z"/>', 'cup' => '<path d="M4 3h12v9a6 6 0 0 1-12 0ZM16 5h2a3 3 0 0 1 0 6h-2M2 21h17"/>', 'calendar' => '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 2v6m10-6v6M3 11h18"/>', 'check' => '<path d="m5 12 4 4L19 6"/>');
+    return '<svg class="icon ' . esc_attr($class) . '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' . ($paths[$name] ?? $paths['arrow']) . '</svg>';
+}
+function cruise_brand() {
+    if (has_custom_logo()) { the_custom_logo(); return; }
+    echo '<a class="brand" href="' . esc_url(home_url('/')) . '" aria-label="C365クルーズ ホーム"><span>C365 CRUISE<small>YOKOHAMA MINATOMIRAI</small></span></a>';
+}
+function cruise_event_image($id) {
+    if ($id && has_post_thumbnail($id)) { return get_the_post_thumbnail_url($id, 'large'); }
+    $name = $id ? get_post_meta($id, '_c365_image', true) : '';
+    if (!in_array($name, array('private-cruise', 'dog-cruise', 'dog-night-cruise'), true)) { $name = 'hero'; }
+    return get_template_directory_uri() . '/assets/' . $name . '.jpg';
+}
+
+function cruise_plan_price_label($plan) {
+    $direct = function_exists('c365_site_ready') && c365_site_ready();
+    $price_key = $direct ? '_c365_charter_price' : '_c365_jalan_price';
+    $price = (int) get_post_meta($plan, $price_key, true);
+    if (!$price) { return '料金はお問い合わせください'; }
+    $amount = '1組 ' . number_format_i18n($price) . '円';
+    return $direct ? $amount . '（税込）' : 'じゃらん掲載 ' . $amount . '〜';
+}

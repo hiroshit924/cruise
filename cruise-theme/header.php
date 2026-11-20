@@ -1,0 +1,6 @@
+<!doctype html>
+<html <?php language_attributes(); ?>>
+<head><meta charset="<?php bloginfo('charset'); ?>"><meta name="viewport" content="width=device-width, initial-scale=1"><?php wp_head(); ?></head>
+<body <?php body_class(); ?>><?php wp_body_open(); ?>
+<a class="skip-link" href="#main">コンテンツへスキップ</a>
+<header class="site-header"><div class="header-inner"><?php cruise_brand(); ?><nav class="desktop-nav" aria-label="メインナビゲーション"><a href="<?php echo esc_url(home_url('/#about')); ?>">クルーズについて</a><a href="<?php echo esc_url(home_url('/#events')); ?>">プラン一覧</a><a href="<?php echo esc_url(home_url('/#guide')); ?>">集合場所</a></nav><a class="button header-join" href="<?php echo esc_url(home_url('/#events')); ?>">プランを見る <?php echo cruise_icon('arrow'); ?></a><button class="menu-toggle" aria-label="メニューを開く" aria-expanded="false" aria-controls="mobile-nav"><span></span><span></span></button></div><nav id="mobile-nav" class="mobile-nav" aria-label="モバイルナビゲーション" hidden><a href="<?php echo esc_url(home_url('/#about')); ?>">クルーズについて</a><a href="<?php echo esc_url(home_url('/#events')); ?>">プラン一覧</a><a href="<?php echo esc_url(home_url('/#guide')); ?>">集合場所</a><a href="<?php echo esc_url(home_url('/#faq')); ?>">よくあるご質問</a></nav></header>

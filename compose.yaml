@@ -1,0 +1,42 @@
+name: c365-cruise
+services:
+  db:
+    image: mariadb:11.4
+    environment:
+      MARIADB_RANDOM_ROOT_PASSWORD: '1'
+      MARIADB_DATABASE: cruise
+      MARIADB_USER: cruise
+      MARIADB_PASSWORD: cruise-local-db
+    volumes:
+      - db:/var/lib/mysql
+    healthcheck:
+      test: [CMD, healthcheck.sh, --connect, --innodb_initialized]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+  wordpress:
+    image: wordpress:php8.3-apache
+    depends_on:
+      db:
+        condition: service_healthy
+    environment: &wordpress-env
+      WORDPRESS_DB_HOST: db
+      WORDPRESS_DB_USER: cruise
+      WORDPRESS_DB_PASSWORD: cruise-local-db
+      WORDPRESS_DB_NAME: cruise
+      WORDPRESS_CONFIG_EXTRA: "define('WP_ENVIRONMENT_TYPE', 'local');"
+    ports:
+      - "127.0.0.1:${CRUISE_PORT:-8080}:80"
+    volumes: &wordpress-volumes
+      - wordpress:/var/www/html
+      - ./cruise-theme:/var/www/html/wp-content/themes/cruise-theme:ro
+      - ./cruise-booking:/var/www/html/wp-content/plugins/cruise-booking:ro
+  cli:
+    image: wordpress:cli-php8.3
+    profiles: [tools]
+    environment: *wordpress-env
+    user: '33:33'
+    volumes: *wordpress-volumes
+volumes:
+  db:
+  wordpress:
