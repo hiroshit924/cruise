@@ -51,7 +51,8 @@ function c365_admin_settings(){
     }
     echo '<p>環境を切り替えて両方のIDを入力し、最後に保存してください。非表示側の入力も保持されます。Access Token・Webhook署名キーは従来どおり環境別のwp-config.php定数を使用します。</p>';
     if(!empty($s['square_app_id'])||!empty($s['square_location_id'])){echo '<details><summary>旧版の共通ID（確認用）</summary><p>Application ID：<code>'.esc_html($s['square_app_id']??'').'</code><br>Location ID：<code>'.esc_html($s['square_location_id']??'').'</code><br>旧版では最後に保存した1組だけが残っています。両環境のIDをSquare管理画面で再確認してください。</p></details>';}
-    foreach(array('sender_email'=>'Microsoft 365送信元メールアドレス','phone'=>'電話番号','responsible_person'=>'運営責任者の氏名') as $key=>$label){echo '<label>'.esc_html($label).'<input type="'.($key==='sender_email'?'email':'text').'" name="'.esc_attr($key).'" value="'.esc_attr($s[$key]??($key==='responsible_person'?'平丸聖弥':'')).'"></label>';}
+    foreach(array('sender_email'=>'Microsoft 365送信元メールアドレス','from_email'=>'Fromアドレス（任意）','phone'=>'電話番号','responsible_person'=>'運営責任者の氏名') as $key=>$label){echo '<label>'.esc_html($label).'<input type="'.(in_array($key,array('sender_email','from_email'),true)?'email':'text').'" name="'.esc_attr($key).'" value="'.esc_attr($s[$key]??($key==='responsible_person'?'平丸聖弥':'')).'"></label>';}
+    echo '<p>Fromは受信者に表示される差出人アドレスです。空欄の場合は送信元メールアドレスのまま送信します。指定したアドレスから送信できるよう、Exchange Online側の権限・設定をご確認ください。</p>';
     echo '<label>お問い合わせ受信先<input type="email" name="contact_email" required value="'.esc_attr(c365_contact_email()).'"></label>';
     echo '<p>キャンセル条件：'.esc_html(c365_policy_text()).'</p>';submit_button('設定を保存');echo '</form></div><div class="vc-admin-form"><h2>初回コンテンツ登録</h2><p>3プラン・お問い合わせ・プライバシーポリシー・キャンセル規定・特商法表記・会社概要・登録と安全情報のページを作成します。同じURLの既存コンテンツは上書きしません。</p>';c365_admin_form_start('import');submit_button('3プランと固定ページを登録','secondary');echo '</form></div><div class="vc-admin-form"><h2>Microsoft 365 テストメール</h2>';c365_admin_form_start('test_mail');echo '<p>'.esc_html(c365_contact_email()).' 宛てのテストメールを1通キューへ登録します。</p>';submit_button('テストメールを登録','secondary');echo '</form></div></div>';
 }
@@ -69,7 +70,25 @@ function c365_admin_action(){
     $action=isset($_POST['c365_action'])&&is_string($_POST['c365_action'])?sanitize_key($_POST['c365_action']):'';check_admin_referer('c365_admin_'.$action);
     $notice='処理しました。';$event=isset($_POST['event'])?absint($_POST['event']):0;$booking=isset($_POST['booking'])?absint($_POST['booking']):0;$r=$booking?c365_booking($booking):null;
     if($action==='settings'){
-        $s=c365_square_update_fields(c365_settings(),$_POST);if(is_wp_error($s)){$notice=$s->get_error_message();}else{foreach(array('phone','responsible_person')as $key){$s[$key]=isset($_POST[$key])&&is_string($_POST[$key])?sanitize_text_field(wp_unslash($_POST[$key])):'';}$s['sender_email']=sanitize_email(wp_unslash($_POST['sender_email']??''));$s['contact_email']=sanitize_email(wp_unslash($_POST['contact_email']??'')) ?: c365_contact_email();$s['square_mode']=($_POST['square_mode']??'')==='production'?'production':'sandbox';$s['enabled']=isset($_POST['enabled'])?1:0;update_option('c365_settings',$s,false);$notice='設定を保存しました。認証情報はテストで確認してください。';}
+        $settings = c365_square_update_fields(c365_settings(), $_POST);
+        $from = $_POST['from_email'] ?? '';
+        $from = is_string($from) ? trim(wp_unslash($from)) : null;
+        if (is_wp_error($settings)) {
+            $notice = $settings->get_error_message();
+        } elseif ($from === null || ($from !== '' && !is_email($from))) {
+            $notice = 'Fromアドレスに有効なメールアドレスを入力するか、空欄にしてください。';
+        } else {
+            foreach (array('phone', 'responsible_person') as $key) {
+                $settings[$key] = isset($_POST[$key]) && is_string($_POST[$key]) ? sanitize_text_field(wp_unslash($_POST[$key])) : '';
+            }
+            $settings['sender_email'] = sanitize_email(wp_unslash($_POST['sender_email'] ?? ''));
+            $settings['contact_email'] = sanitize_email(wp_unslash($_POST['contact_email'] ?? '')) ?: c365_contact_email();
+            if (array_key_exists('from_email', $_POST)) { $settings['from_email'] = $from; }
+            $settings['square_mode'] = ($_POST['square_mode'] ?? '') === 'production' ? 'production' : 'sandbox';
+            $settings['enabled'] = isset($_POST['enabled']) ? 1 : 0;
+            update_option('c365_settings', $settings, false);
+            $notice = '設定を保存しました。認証情報はテストで確認してください。';
+        }
     }elseif($action==='import'){$ids=c365_import_launch_events();c365_import_pages();flush_rewrite_rules();$notice=count($ids).'プランと固定ページを登録・確認しました。';
     }elseif($action==='message'){
         if(($_POST['confirm']??'')!=='yes'||!$event){wp_die('送信対象を確認してください。');}

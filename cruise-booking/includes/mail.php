@@ -18,6 +18,8 @@ function c365_queue_mail($to, $subject, $body, $batch, $booking = 0) {
 function c365_spawn_mail_cron() { if (!defined('DOING_CRON') && !defined('WP_CLI')) { spawn_cron(); } }
 function c365_graph_send($to, $subject, $body) {
     if (!c365_mail_ready()) { return new WP_Error('not_configured', 'Microsoft 365 未設定'); }
+    $from = c365_setting('from_email');
+    if (!is_string($from) || ($from !== '' && !is_email($from))) { return new WP_Error('invalid_from', 'Fromアドレスの設定を確認してください。'); }
     $tenant = c365_secret('C365_M365_TENANT_ID'); $client = c365_secret('C365_M365_CLIENT_ID');
     if (!preg_match('/^[a-f0-9-]{36}$/i', $tenant) || !preg_match('/^[a-f0-9-]{36}$/i', $client)) { return new WP_Error('invalid_config', 'Microsoft 365 ID形式エラー'); }
     $cache_key = 'c365_graph_' . substr(hash('sha256', $tenant . $client . c365_secret('C365_M365_CLIENT_SECRET')), 0, 20);
@@ -31,6 +33,9 @@ function c365_graph_send($to, $subject, $body) {
     }
     $sender = sanitize_email(c365_setting('sender_email', 'info@c365.jp'));
     $payload = array('message' => array('subject' => $subject, 'body' => array('contentType' => 'Text', 'content' => $body), 'toRecipients' => array(array('emailAddress' => array('address' => $to)))), 'saveToSentItems' => true);
+    if ($from !== '') {
+        $payload['message']['from'] = array('emailAddress' => array('address' => $from));
+    }
     $r = wp_remote_post('https://graph.microsoft.com/v1.0/users/' . rawurlencode($sender) . '/sendMail', array('timeout' => 30, 'headers' => array('Authorization' => 'Bearer ' . $token, 'Content-Type' => 'application/json'), 'body' => wp_json_encode($payload)));
     if (is_wp_error($r)) { return new WP_Error('delivery_uncertain', '送信結果不明。送信済みフォルダーを確認してから再送してください。'); }
     $status = wp_remote_retrieve_response_code($r);
@@ -38,6 +43,10 @@ function c365_graph_send($to, $subject, $body) {
     if ($status === 401) { delete_transient($cache_key); }
     if ($status === 429) { return new WP_Error('rate_limit', 'Microsoft 365 送信制限', array('retry_after' => min(3600, max(60, (int) wp_remote_retrieve_header($r, 'retry-after'))))); }
     if ($status >= 500) { return new WP_Error('delivery_uncertain', 'Microsoft 365 応答エラー。送信済みフォルダーを確認してください。'); }
+    $error = json_decode(wp_remote_retrieve_body($r), true);
+    if ($from !== '' && ($error['error']['code'] ?? '') === 'ErrorSendAsDenied') {
+        return new WP_Error('delivery_rejected', 'Microsoft 365 がFromアドレスでの送信を拒否しました。Exchange Online側の送信権限を確認してください。');
+    }
     return new WP_Error('delivery_rejected', 'Microsoft 365 が送信を受理しませんでした（HTTP ' . $status . '）');
 }
 function c365_process_mail_queue() {

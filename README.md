@@ -46,6 +46,8 @@ VINCROSS の既存イベントと固定ページを保持するため、クル�
 
 WordPress を `staging` に設定したステージング環境で Square Sandbox の決済・Webhook・返金を確認します。Microsoft 365 は VINCROSS と同様に Graph の `Mail.Send` を持つアプリを構成し、実際に利用するメールボックスへ送信権限を付与します。「Microsoft 365 テストメール」で実際の受信箱まで確認してください。送信キューの処理には WordPress cron を使用します。
 
+送信元メールボックスとは別に受信者へ表示するアドレスを指定するには、「接続・受付設定」の「Fromアドレス（任意）」に入力します。空欄なら送信元のアドレスを使います。別アドレスを指定する場合は、Exchange Online側でそのアドレスからの送信が許可されていることを確認し、テストメールの受信時に実際のFromを確認してください。 [Microsoft Graph の差出人設定](https://learn.microsoft.com/ja-jp/graph/outlook-send-mail-from-other-user)
+
 公開先では Square を Production に切り替え、予約・メールを確認したうえで「予約受付を有効にする」を選びます。キャッシュを使用する場合は `/plans/*`、`/contact/`、`/wp-json/cruise/v1/*` を対象外にします。
 
 ## ローカル開発

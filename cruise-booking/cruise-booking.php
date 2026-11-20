@@ -2,7 +2,7 @@
 /**
  * Plugin Name: C365 Cruise Booking
  * Description: C365の貸切クルーズ予約・Square決済・Microsoft 365メール・予約管理・検索向け設定。
- * Version: 1.0.3
+ * Version: 1.0.4
  * Requires at least: 6.5
  * Requires PHP: 7.4
  * Author: C365
@@ -10,7 +10,7 @@
  * Text Domain: cruise-booking
  */
 if (!defined('ABSPATH')) { exit; }
-define('C365_BOOKING_VERSION', '1.0.3');
+define('C365_BOOKING_VERSION', '1.0.4');
 define('C365_BOOKING_PATH', plugin_dir_path(__FILE__));
 define('C365_BOOKING_URL', plugin_dir_url(__FILE__));
 foreach (array('store', 'events', 'mail', 'square', 'api', 'forms', 'admin', 'seo', 'privacy', 'safety', 'seed') as $file) { require_once C365_BOOKING_PATH . 'includes/' . $file . '.php'; }
