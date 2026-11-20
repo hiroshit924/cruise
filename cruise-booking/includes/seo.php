@@ -7,12 +7,30 @@ function c365_uses_seo_plugin() {
 
 add_filter('pre_get_document_title', function ($title) {
     if (c365_uses_seo_plugin()) { return $title; }
-    if (is_front_page()) { return '横浜・みなとみらいの貸切クルーズ｜C365 CRUISE'; }
+    if (is_front_page()) { return c365_text('横浜・みなとみらいの貸切クルーズ｜C365 CRUISE', 'Private Cruises in Yokohama and Minato Mirai | C365 CRUISE'); }
     if (is_singular('c365_plan')) {
-        return trim(wp_strip_all_tags(get_the_title())) . '｜横浜の貸切クルーズ C365';
+        $plan = get_queried_object();
+        return c365_is_english()
+            ? wp_strip_all_tags(c365_english_plan($plan)[0]) . ' | C365 CRUISE Yokohama'
+            : trim(wp_strip_all_tags(get_the_title())) . '｜横浜の貸切クルーズ C365';
+    }
+    if (c365_is_english() && is_page()) {
+        $page = c365_english_page(get_post_field('post_name', get_queried_object_id()));
+        if ($page) { return $page[0] . ' | C365 CRUISE'; }
     }
     return $title;
 });
+
+add_filter('get_canonical_url', function ($url) {
+    return c365_local_url($url);
+});
+
+add_action('wp_head', function () {
+    if (!is_front_page() && !is_singular('c365_plan')) { return; }
+    $url = is_front_page() ? home_url('/') : get_permalink();
+    echo '<link rel="alternate" hreflang="ja" href="' . esc_url($url) . '">' . "\n";
+    echo '<link rel="alternate" hreflang="en" href="' . esc_url(add_query_arg('cruise_lang', 'en', $url)) . '">' . "\n";
+}, 6);
 
 add_filter('wp_robots', function ($robots) {
     if (is_singular('c365_plan') && (isset($_GET['booking_month']) || isset($_GET['booking_date']) || isset($_GET['departure']))) {
@@ -27,7 +45,11 @@ add_action('wp_head', function () {
     $description = $plan
         ? trim(wp_strip_all_tags(get_the_excerpt($plan))) . ' 横浜・みなとみらいの60分の貸切クルーズ。1組最大5名。'
         : '横浜・みなとみらいを海から巡る60分の貸切クルーズ。1組最大5名。日ノ出桟橋発で、愛犬と乗れるデイクルーズやナイトクルーズも選べます。料金・集合場所・予約方法をご案内します。';
-    $url = $plan ? get_permalink($plan) : home_url('/');
+    if (c365_is_english()) {
+        $description = $plan ? c365_english_plan($plan)[1]
+            : 'Book a 60-minute private cruise in Yokohama and Minato Mirai. Explore daytime, dog-friendly and night cruises departing from Hinode Pier.';
+    }
+    $url = c365_local_url($plan ? get_permalink($plan) : home_url('/'));
     $image = '';
     if (function_exists('cruise_event_image')) {
         $image = $plan ? cruise_event_image($plan->ID) : (get_theme_mod('cruise_hero') ?: cruise_event_image(0));
@@ -38,7 +60,7 @@ add_action('wp_head', function () {
     <?php endif; ?>
     <meta name="description" content="<?php echo esc_attr($description); ?>">
     <meta property="og:type" content="website">
-    <meta property="og:locale" content="ja_JP">
+    <meta property="og:locale" content="<?php echo esc_attr(c365_text('ja_JP', 'en_US')); ?>">
     <meta property="og:title" content="<?php echo esc_attr(wp_get_document_title()); ?>">
     <meta property="og:description" content="<?php echo esc_attr($description); ?>">
     <meta property="og:url" content="<?php echo esc_url($url); ?>">
@@ -76,10 +98,10 @@ function c365_search_graph($plan, $url, $description, $image) {
         $service = array(
             '@type' => 'Service',
             '@id' => $url . '#cruise-service',
-            'name' => wp_strip_all_tags(get_the_title($plan)),
+            'name' => wp_strip_all_tags(c365_is_english() ? c365_english_plan($plan)[0] : get_the_title($plan)),
             'description' => $description,
             'url' => $url,
-            'serviceType' => '横浜・みなとみらいの貸切クルーズ',
+            'serviceType' => c365_text('横浜・みなとみらいの貸切クルーズ', 'Private cruises in Yokohama and Minato Mirai'),
             'areaServed' => array('横浜', 'みなとみらい'),
             'provider' => $provider,
         );
@@ -92,7 +114,7 @@ function c365_search_graph($plan, $url, $description, $image) {
         '@id' => $home . '#website',
         'name' => 'C365 CRUISE',
         'url' => $home,
-        'inLanguage' => 'ja',
+        'inLanguage' => c365_text('ja', 'en'),
         'publisher' => $provider,
     ));
     $items = array();
@@ -100,11 +122,11 @@ function c365_search_graph($plan, $url, $description, $image) {
         $items[] = array(
             '@type' => 'ListItem',
             'position' => count($items) + 1,
-            'url' => get_permalink($published_plan),
-            'name' => wp_strip_all_tags(get_the_title($published_plan)),
+            'url' => c365_local_url(get_permalink($published_plan)),
+            'name' => wp_strip_all_tags(c365_is_english() ? c365_english_plan($published_plan)[0] : get_the_title($published_plan)),
         );
     }
-    if ($items) { $graph[] = array('@type' => 'ItemList', 'name' => '貸切クルーズプラン', 'itemListElement' => $items); }
+    if ($items) { $graph[] = array('@type' => 'ItemList', 'name' => c365_text('貸切クルーズプラン', 'Private cruises'), 'itemListElement' => $items); }
     if (function_exists('cruise_faq_items')) {
         $questions = array();
         foreach (cruise_faq_items() as $question => $answer) {
@@ -114,7 +136,7 @@ function c365_search_graph($plan, $url, $description, $image) {
                 'acceptedAnswer' => array('@type' => 'Answer', 'text' => $answer),
             );
         }
-        $graph[] = array('@type' => 'FAQPage', '@id' => $home . '#faq', 'inLanguage' => 'ja', 'mainEntity' => $questions);
+        $graph[] = array('@type' => 'FAQPage', '@id' => $home . '#faq', 'inLanguage' => c365_text('ja', 'en'), 'mainEntity' => $questions);
     }
     return $graph;
 }

@@ -2,7 +2,7 @@
 /**
  * Plugin Name: C365 Cruise Booking
  * Description: C365の貸切クルーズ予約・Square決済・Microsoft 365メール・予約管理・検索向け設定。
- * Version: 1.0.6
+ * Version: 1.0.7
  * Requires at least: 6.5
  * Requires PHP: 7.4
  * Author: C365
@@ -10,10 +10,10 @@
  * Text Domain: cruise-booking
  */
 if (!defined('ABSPATH')) { exit; }
-define('C365_BOOKING_VERSION', '1.0.6');
+define('C365_BOOKING_VERSION', '1.0.7');
 define('C365_BOOKING_PATH', plugin_dir_path(__FILE__));
 define('C365_BOOKING_URL', plugin_dir_url(__FILE__));
-foreach (array('store', 'events', 'mail', 'square', 'api', 'forms', 'admin', 'seo', 'privacy', 'safety', 'seed') as $file) { require_once C365_BOOKING_PATH . 'includes/' . $file . '.php'; }
+foreach (array('language', 'store', 'events', 'departure-dates', 'mail', 'square', 'api', 'forms', 'admin', 'seo', 'privacy', 'safety', 'seed') as $file) { require_once C365_BOOKING_PATH . 'includes/' . $file . '.php'; }
 register_activation_hook(__FILE__, function () {
     c365_install_tables(); c365_register_events();
     if (!get_option('c365_settings')) { add_option('c365_settings', array('enabled' => 0, 'square_mode' => 'sandbox', 'phone' => '045-297-6375', 'contact_email' => 'info@c365.jp', 'sender_email' => 'info@c365.jp'), '', false); }
@@ -51,7 +51,7 @@ function c365_event_time($id, $key = 'date') {
     try { return (new DateTimeImmutable($date, c365_tokyo()))->getTimestamp(); } catch (Exception $e) { return 0; }
 }
 function c365_date($format, $timestamp) { return wp_date($format, $timestamp, c365_tokyo()); }
-function c365_error($code, $message, $status = 400) { return new WP_Error($code, $message, array('status' => $status)); }
+function c365_error($code, $message, $status = 400) { return new WP_Error($code, c365_public_error_message($code, $message), array('status' => $status)); }
 function c365_site_ready() {
     $local = wp_get_environment_type() === 'local';
     if (!c365_setting('enabled') || (!$local && (!is_ssl() || !c365_mail_ready()))) { return false; }

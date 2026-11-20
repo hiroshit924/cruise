@@ -88,7 +88,7 @@ function c365_api_reserve($request) {
         $price = c365_price($event);
         if (is_wp_error($price)) { return $price; }
         $plan = (int) get_post_meta($event, '_c365_plan', true);
-        if (c365_plan_booking_mode($plan) === 'jalan') {
+        if (!c365_is_english() && c365_plan_booking_mode($plan) === 'jalan') {
             return c365_error('not_open', 'このプランはじゃらんの掲載ページからお申し込みください。', 503);
         }
         c365_expire_holds($event);
@@ -155,5 +155,5 @@ function c365_api_contact($request) {
     $request_id=c365_string($d,'request_id',36);
     if (!preg_match('/^[a-f0-9-]{36}$/',$request_id)) { return c365_error('request','送信識別子が無効です。'); }
     if (!c365_queue_mail(c365_contact_email(),'【C365クルーズお問い合わせ】'.$subject,$body,'contact_'.$request_id)) { return c365_error('save','お問い合わせを保存できませんでした。時間をおいてお試しください。',503); }
-    return c365_api_response(array('accepted'=>true,'message'=>'お問い合わせを受け付けました。運営からの返信をお待ちください。'));
+    return c365_api_response(array('accepted'=>true,'message'=>c365_text('お問い合わせを受け付けました。運営からの返信をお待ちください。', 'We received your message and will reply by email.')));
 }

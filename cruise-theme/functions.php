@@ -40,11 +40,48 @@ function cruise_icon($name, $class = '') {
 function cruise_brand() {
     if (has_custom_logo()) { the_custom_logo(); return; }
     $logo = get_template_directory_uri() . '/assets/c365-cruise-logo.png';
-    echo '<a class="brand" href="' . esc_url(home_url('/')) . '"><img width="1000" height="333" src="' . esc_url($logo) . '" alt="C365クルーズ ホーム"></a>';
+    echo '<a class="brand" href="' . esc_url(cruise_local_url(home_url('/'))) . '"><img width="1000" height="333" src="' . esc_url($logo) . '" alt="' . esc_attr(cruise_text('C365クルーズ ホーム', 'C365 Cruise home')) . '"></a>';
 }
+function cruise_is_english() {
+    return isset($_GET['cruise_lang']) && $_GET['cruise_lang'] === 'en';
+}
+
+function cruise_text($japanese, $english) {
+    return cruise_is_english() ? $english : $japanese;
+}
+
+function cruise_output($japanese, $english) {
+    echo esc_html(cruise_text($japanese, $english));
+}
+
+function cruise_local_url($url) {
+    return cruise_is_english() ? add_query_arg('cruise_lang', 'en', $url) : $url;
+}
+
+function cruise_locale_switch() {
+    $url = is_singular() ? get_permalink() : home_url('/');
+    foreach (array('booking_month', 'booking_date', 'departure') as $key) {
+        if (isset($_GET[$key]) && is_string($_GET[$key])) {
+            $url = add_query_arg($key, urlencode(wp_unslash($_GET[$key])), $url);
+        }
+    }
+    $english = cruise_is_english();
+    if (!$english) { $url = add_query_arg('cruise_lang', 'en', $url); }
+    echo '<a class="cruise-language" href="' . esc_url($url) . '" hreflang="' . ($english ? 'ja' : 'en') . '" lang="' . ($english ? 'ja' : 'en') . '">' . ($english ? '日本語' : 'English') . '</a>';
+}
+
+function cruise_plan_copy($plan) {
+    if (cruise_is_english() && function_exists('c365_english_plan')) { return c365_english_plan($plan); }
+    return array(get_the_title($plan), get_the_excerpt($plan));
+}
+
+add_filter('language_attributes', function ($attributes) {
+    return cruise_is_english() ? 'lang="en"' : $attributes;
+});
+
 function cruise_page_url($slug) {
     $page = get_page_by_path($slug);
-    return $page ? get_permalink($page) : home_url('/' . $slug . '/');
+    return cruise_local_url($page ? get_permalink($page) : home_url('/' . $slug . '/'));
 }
 function cruise_event_image($id) {
     if ($id && has_post_thumbnail($id)) { return get_the_post_thumbnail_url($id, 'large'); }
@@ -57,14 +94,26 @@ function cruise_plan_price_label($plan) {
     $direct = function_exists('c365_plan_accepts_bookings')
         ? c365_plan_accepts_bookings($plan)
         : (function_exists('c365_site_ready') && c365_site_ready());
-    $price_key = $direct ? '_c365_charter_price' : '_c365_jalan_price';
+    $price_key = $direct || cruise_is_english() ? '_c365_charter_price' : '_c365_jalan_price';
     $price = (int) get_post_meta($plan, $price_key, true);
-    if (!$price) { return '料金はお問い合わせください'; }
+    if (!$price) { return cruise_text('料金はお問い合わせください', 'Contact us for pricing'); }
+    if (cruise_is_english()) { return '¥' . number_format_i18n($price) . ' per charter (tax included)'; }
     $amount = '1組 ' . number_format_i18n($price) . '円';
     return $direct ? $amount . '（税込）' : 'じゃらん掲載 ' . $amount . '〜';
 }
 
 function cruise_faq_items() {
+    if (cruise_is_english()) {
+        return array(
+            'How long is the private cruise?' => 'The cruise takes 60 minutes, departing from Hinode Pier and heading along the Ōoka River toward Minato Mirai.',
+            'Where do we meet?' => 'Meet at C365, 44-2 Fukutomichō Nishidōri, Naka Ward, Yokohama, at least 30 minutes before departure. It is a five-minute walk from Hinodechō Station or a ten-minute walk from Sakuragichō Station.',
+            'Can I book for one person?' => 'Yes. A solo passenger pays the same charter rate as two passengers. The boat takes up to five passengers.',
+            'Can children join?' => 'Children aged six and over who are in elementary school or older may join.',
+            'Can I bring my dog?' => 'Dogs can join either dog-friendly cruise. Please bring a carrier or leash and a dog diaper.',
+            'What should I wear?' => 'Bring a warm layer and clothes you do not mind getting wet. Passenger life jackets are included.',
+            'What if the weather is bad?' => 'If conditions require cancellation, we will contact you by 6:00 p.m. the day before departure. Operator cancellations are refunded in full.',
+        );
+    }
     return array(
         '横浜・みなとみらいの貸切クルーズは何分ですか？' => '運航は60分です。日ノ出桟橋から大岡川を抜け、みなとみらいへ向かいます。',
         'クルーズの集合場所はどこですか？' => '出航30分前までにC365（神奈川県横浜市中区福富町西通44-2）へお越しください。京急 日ノ出町駅から徒歩5分、JR 桜木町駅から徒歩10分です。',
