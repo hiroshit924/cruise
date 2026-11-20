@@ -40,7 +40,22 @@ function c365_admin_bookings() {
 add_action('admin_enqueue_scripts',function(){if(isset($_GET['page'])&&$_GET['page']==='cruise-settings'){wp_enqueue_script('vc-admin-settings',C365_BOOKING_URL.'assets/admin-settings.js',array(),C365_BOOKING_VERSION,true);}});
 function c365_admin_settings(){
     c365_admin_header('C365クルーズ 接続・受付設定');$s=c365_settings();
-    echo '<div class="vc-admin-form"><h2>接続状況（設定の有無）</h2><p>Square認証情報（保存済みの環境）：'.(c365_square_ready()?'設定済み（実通信テストは別途必要）':'未設定').'<br>Microsoft 365：'.(c365_mail_ready()?'設定済み（テストメールで確認してください）':'未設定').'</p><p>Sandbox通知URL：<br><code>'.esc_html(rest_url('cruise/v1/square-webhook-sandbox')).'</code><br>Production通知URL：<br><code>'.esc_html(rest_url('cruise/v1/square-webhook')).'</code></p><p>秘密情報は管理画面やリポジトリに保存せず、サーバーの wp-config.php に定数で設定してください。詳しくは付属の導入手順をご覧ください。</p>';
+    $mode = c365_square_mode();
+    $mode_label = $mode === 'sandbox' ? 'Sandbox（テスト専用）' : 'Production（本番）';
+    $issues = c365_square_configuration_issues($mode);
+    $sandbox_blocked = c365_square_sandbox_blocked($mode);
+    $square_status = $issues ? '設定を確認してください' : '設定済み（実通信テストは別途必要）';
+    echo '<div class="vc-admin-form"><h2>接続状況（設定の有無）</h2><p>Square認証情報（保存済みの環境：'
+        . esc_html($mode_label) . '）：' . esc_html($square_status) . '</p>';
+    if ($sandbox_blocked) {
+        echo '<p>WordPressが本番環境のため、Sandboxカード決済は無効です。Sandbox決済を試すにはステージング環境をご利用ください。</p>';
+    }
+    if ($issues) {
+        echo '<ul>';
+        foreach ($issues as $issue) { echo '<li>' . esc_html($issue) . '</li>'; }
+        echo '</ul>';
+    }
+    echo '<p>Microsoft 365：'.(c365_mail_ready()?'設定済み（テストメールで確認してください）':'未設定').'</p><p>Sandbox通知URL：<br><code>'.esc_html(rest_url('cruise/v1/square-webhook-sandbox')).'</code><br>Production通知URL：<br><code>'.esc_html(rest_url('cruise/v1/square-webhook')).'</code></p><p>秘密情報は管理画面やリポジトリに保存せず、サーバーの wp-config.php に定数で設定してください。詳しくは付属の導入手順をご覧ください。</p>';
     c365_admin_form_start('settings');echo '<label><input type="checkbox" name="enabled" value="1" '.checked(!empty($s['enabled']),true,false).'> 予約受付を有効にする（接続・法定表記・確認テストの完了後）</label><label>Square環境 <select id="vc-square-mode" name="square_mode" aria-controls="vc-square-sandbox vc-square-production"><option value="sandbox" '.selected(c365_square_mode(),'sandbox',false).'>Sandbox（テスト専用）</option><option value="production" '.selected(c365_square_mode(),'production',false).'>Production（本番）</option></select></label>';
     echo '<p id="vc-square-selection" aria-live="polite">各環境のIDを別々に保存します。</p>';
     foreach(array('sandbox'=>'Sandbox（テスト専用）','production'=>'Production（本番）') as $mode=>$label){

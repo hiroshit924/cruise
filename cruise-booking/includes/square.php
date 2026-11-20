@@ -8,12 +8,27 @@ function c365_square_config($mode = null) {
     return array('app_id'=>(string)c365_setting('square_'.$mode.'_app_id'),'location_id'=>(string)c365_setting('square_'.$mode.'_location_id'));
 }
 function c365_square_app_matches_mode($app,$mode) { return $mode==='sandbox'?strpos($app,'sandbox-')===0:strpos($app,'sq0idp-')===0; }
+function c365_square_configuration_issues($mode) {
+    $config = c365_square_config($mode);
+    $issues = array();
+    if (!$config['app_id']) {
+        $issues[] = 'Application IDが未設定です。';
+    } elseif (!c365_square_app_matches_mode($config['app_id'], $mode)) {
+        $issues[] = 'Application IDが選択したSquare環境に対応していません。';
+    }
+    if (!$config['location_id']) { $issues[] = 'Location IDが未設定です。'; }
+    if (!c365_square_token($mode)) {
+        $constant = $mode === 'sandbox' ? 'C365_SQUARE_SANDBOX_TOKEN' : 'C365_SQUARE_PRODUCTION_TOKEN';
+        $issues[] = 'wp-config.php の ' . $constant . ' を確認してください。';
+    }
+    return $issues;
+}
+function c365_square_sandbox_blocked($mode) {
+    return $mode === 'sandbox' && wp_get_environment_type() === 'production';
+}
 function c365_square_ready() {
     $mode = c365_square_mode();
-    if ($mode === 'sandbox' && wp_get_environment_type() === 'production') { return false; }
-    $config = c365_square_config($mode);
-    return c365_square_token($mode) && $config['app_id'] && $config['location_id']
-        && c365_square_app_matches_mode($config['app_id'], $mode);
+    return !c365_square_sandbox_blocked($mode) && !c365_square_configuration_issues($mode);
 }
 function c365_square_update_fields($settings,$data) {
     foreach(array('sandbox','production') as $mode){
