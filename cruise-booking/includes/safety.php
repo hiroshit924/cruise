@@ -100,22 +100,33 @@ add_shortcode('cruise_vessels', function () {
 });
 
 function c365_import_safety_page() {
-    if (!get_page_by_path('sea365', OBJECT, 'c365_vessel')) {
+    $vessels = array(
+        'sea365' => array('Sea365', array(
+            'number' => '第241-21426号',
+            'tonnage' => '2.9トン',
+            'passengers' => '9名',
+            'lifesaving' => '救命胴衣10着（株式会社NEXUS公表資料）、救命いかだ0基、救命浮器1基。国土交通省公表情報には子ども用救命胴衣2着の記載があります。',
+            'radio' => '携帯電話1台、衛星電話なし、業務用無線設備なし。',
+            'certificate' => '2025年（令和7年）4月3日',
+            'source' => 'https://chain-nexus.co.jp/archives/788',
+        )),
+        'blue-corner-2' => array('ブルーコーナーⅡ', array('tonnage' => '11トン', 'number' => '第232-43993号')),
+        'blue-corner-3' => array('ブルーコーナーⅢ', array('tonnage' => '1.3トン', 'number' => '第241-21605号')),
+        'slow-knots' => array('Slow Knots', array('tonnage' => '1.6トン', 'number' => '第273-12480号')),
+        'slab-255-wake' => array('スラブ255WAKE', array('tonnage' => '2.2トン', 'number' => '第241-21884号')),
+    );
+    foreach ($vessels as $slug => list($name, $data)) {
+        if (get_page_by_path($slug, OBJECT, 'c365_vessel')) { continue; }
+        $existing = get_posts(array(
+            'post_type' => 'c365_vessel', 'post_status' => 'any', 'numberposts' => 1,
+            'meta_key' => '_c365_vessel_number', 'meta_value' => $data['number'],
+        ));
+        if ($existing) { continue; }
         $id = wp_insert_post(array(
-            'post_type' => 'c365_vessel', 'post_status' => 'publish', 'post_name' => 'sea365', 'post_title' => 'Sea365',
+            'post_type' => 'c365_vessel', 'post_status' => 'publish', 'post_name' => $slug, 'post_title' => $name,
         ), true);
-        if (!is_wp_error($id)) {
-            $data = array(
-                'number' => '第241-21426号',
-                'tonnage' => '2.9トン',
-                'passengers' => '9名',
-                'lifesaving' => '救命胴衣10着（株式会社NEXUS公表資料）、救命いかだ0基、救命浮器1基。国土交通省公表情報には子ども用救命胴衣2着の記載があります。',
-                'radio' => '携帯電話1台、衛星電話なし、業務用無線設備なし。',
-                'certificate' => '2025年（令和7年）4月3日',
-                'source' => 'https://chain-nexus.co.jp/archives/788',
-            );
-            foreach ($data as $key => $value) { update_post_meta($id, '_c365_vessel_' . $key, $value); }
-        }
+        if (is_wp_error($id)) { continue; }
+        foreach ($data as $key => $value) { update_post_meta($id, '_c365_vessel_' . $key, $value); }
     }
 
     if (get_page_by_path('safety-information')) { return; }
