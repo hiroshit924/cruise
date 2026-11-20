@@ -17,4 +17,15 @@
   mobileNav?.querySelectorAll('a').forEach(a => a.addEventListener('click', closeMenu));
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
   window.matchMedia('(min-width: 781px)').addEventListener('change', e => { if (e.matches) closeMenu(); });
+
+  if ('IntersectionObserver' in window && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    const observer = new IntersectionObserver(entries => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        entry.target.classList.add('intro-revealed');
+        observer.unobserve(entry.target);
+      }
+    }, { threshold: 0.18 });
+    document.querySelectorAll('[data-intro-reveal]').forEach(element => observer.observe(element));
+  }
 })();

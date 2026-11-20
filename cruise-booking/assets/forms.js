@@ -10,7 +10,15 @@
    const headers = { 'Content-Type': 'application/json' };
    if (session) headers['X-VC-Nonce'] = session.nonce;
    if (token) headers['X-VC-Booking-Token'] = token;
-   const response = await fetch(config.api + path, { method: data ? 'POST' : 'GET', headers, body: data ? JSON.stringify(data) : undefined, credentials: 'same-origin', cache: 'no-store' });
+   const [route, query] = path.split('?', 2);
+   const url = new URL(config.api, window.location.href);
+   if (url.searchParams.has('rest_route')) {
+     url.searchParams.set('rest_route', url.searchParams.get('rest_route') + route);
+   } else {
+     url.pathname += route;
+   }
+   for (const [key, value] of new URLSearchParams(query)) url.searchParams.append(key, value);
+   const response = await fetch(url, { method: data ? 'POST' : 'GET', headers, body: data ? JSON.stringify(data) : undefined, credentials: 'same-origin', cache: 'no-store' });
    const result = await response.json().catch(()=>({message:'サーバーから応答を確認できませんでした。予約状況をご確認ください。'}));
    if (!response.ok) { const error = new Error(result.message || '処理を完了できませんでした。'); error.code = result.code; throw error; }
    return result;
@@ -44,7 +52,7 @@
        price = q.amount;
        available = q.available;
        quote.textContent = '貸切1組 ' + Number(price).toLocaleString('ja-JP') + '円（税込）';
-       if (!available) message('現在、この出航枠の新規予約は受け付けていません。', true);
+       if (!available) message(q.full ? '選択した出航枠は満席です。別の時間をお選びください。' : '現在、この出航枠の新規予約は受け付けていません。', true);
      } catch (e) {
        available = false;
        message(e.message, true);
@@ -84,6 +92,7 @@
      }catch(e){
        message(e.message,true);
        if(e.code==='price_changed'){await showPrice();message('料金が更新されました。表示料金を確認してから再度お申し込みください。',true);}
+       if(e.code==='full') await showPrice();
        if(state.id){reconcile.hidden=false;if(e.code&&e.code.startsWith('square_')&&e.code!=='square_unknown'){message(e.message+' 決済は確定していません。状況を再確認するか、ページを再読み込みしてください。',true);}}
      }finally{busy=false;if(!['paid','reserved'].includes(state.status))submit.disabled=!available && !state.id;}
    });

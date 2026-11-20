@@ -40,20 +40,58 @@ function c365_departures($plan) {
     ));
 }
 
+function c365_plan_booking_mode($plan) {
+    $mode = get_post_meta($plan, '_c365_booking_mode', true);
+    return in_array($mode, array('direct', 'jalan'), true) ? $mode : 'auto';
+}
+
+function c365_plan_accepts_bookings($plan) {
+    return c365_plan_booking_mode($plan) !== 'jalan' && c365_site_ready();
+}
+
 add_action('add_meta_boxes', function () {
     add_meta_box('c365_departure', '出航設定（日本時間・運航60分）', 'c365_departure_fields', 'c365_event');
-    add_meta_box('c365_plan_settings', 'プラン料金', 'c365_plan_fields', 'c365_plan');
+    add_meta_box('c365_plan_settings', 'プラン料金・予約方法', 'c365_plan_fields', 'c365_plan');
 });
 
 function c365_plan_fields($post) {
     wp_nonce_field('c365_save_plan', 'c365_plan_nonce');
     $price = get_post_meta($post->ID, '_c365_charter_price', true);
-    echo '<label>貸切1組あたり（税込・円） <input type="number" min="1" step="1" name="c365_charter_price" value="' . esc_attr($price) . '"></label>';
+    $mode = c365_plan_booking_mode($post->ID);
+    $jalan = get_post_meta($post->ID, '_c365_jalan', true);
+    ?>
+    <p><label>貸切1組あたり（税込・円） <input type="number" min="1" step="1" name="c365_charter_price" value="<?php echo esc_attr($price); ?>"></label></p>
+    <p><label>予約方法
+        <select name="c365_booking_mode">
+            <option value="auto" <?php selected($mode, 'auto'); ?>>サイト全体の受付設定に従う（既定）</option>
+            <option value="direct" <?php selected($mode, 'direct'); ?>>自社サイトで予約する</option>
+            <option value="jalan" <?php selected($mode, 'jalan'); ?>>じゃらんで予約する</option>
+        </select>
+    </label></p>
+    <p><label for="c365-jalan-url">じゃらん掲載URL</label><br>
+        <input id="c365-jalan-url" class="large-text" type="url" name="c365_jalan_url" value="<?php echo esc_attr($jalan); ?>">
+    </p>
+    <p class="description">自社サイトで予約するには、サイト全体の受付を有効にし、出航枠を公開してください。</p>
+    <?php
 }
 
 add_action('save_post_c365_plan', function ($id) {
-    if (!c365_may_edit($id, 'c365_plan_nonce', 'c365_save_plan') || !isset($_POST['c365_charter_price']) || !is_string($_POST['c365_charter_price'])) { return; }
-    update_post_meta($id, '_c365_charter_price', max(0, (int) $_POST['c365_charter_price']));
+    if (!c365_may_edit($id, 'c365_plan_nonce', 'c365_save_plan')) { return; }
+    if (isset($_POST['c365_charter_price']) && is_string($_POST['c365_charter_price'])) {
+        update_post_meta($id, '_c365_charter_price', max(0, (int) $_POST['c365_charter_price']));
+    }
+    $mode = $_POST['c365_booking_mode'] ?? null;
+    if (in_array($mode, array('auto', 'direct', 'jalan'), true)) {
+        update_post_meta($id, '_c365_booking_mode', $mode);
+    }
+    if (isset($_POST['c365_jalan_url']) && is_string($_POST['c365_jalan_url'])) {
+        $url = trim(wp_unslash($_POST['c365_jalan_url']));
+        if ($url === '') {
+            delete_post_meta($id, '_c365_jalan');
+        } elseif (wp_http_validate_url($url)) {
+            update_post_meta($id, '_c365_jalan', esc_url_raw($url, array('http', 'https')));
+        }
+    }
 });
 
 function c365_departure_fields($post) {

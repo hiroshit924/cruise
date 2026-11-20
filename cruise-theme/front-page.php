@@ -9,15 +9,15 @@ $plans = function_exists('c365_plans') ? c365_plans() : array();
         <div class="hero-shade"></div>
         <div class="container hero-content">
             <p class="hero-kicker"><span class="little-line"></span> YOKOHAMA MINATOMIRAI</p>
-            <h1 id="hero-title">海から眺める、<br>みなとみらい。</h1>
-            <p class="hero-description">横浜の景色を、貸切の船でゆったりと。<br>ご家族やご友人、愛犬と過ごす60分。</p>
+            <h1 id="hero-title">横浜・みなとみらい<br>貸切クルーズ</h1>
+            <p class="hero-description">海から眺める、横浜の景色を貸切の船で。<br>ご家族やご友人、愛犬と過ごす60分。</p>
             <a class="button hero-button" href="#events">クルーズプランを見る <?php echo cruise_icon('arrow'); ?></a>
         </div>
     </section>
     <section class="intro" id="about">
         <div class="container intro-layout">
-            <div><span class="eyebrow">ABOUT THE CRUISE</span><h2>横浜を、<br>海の上から。</h2></div>
-            <div class="intro-copy">
+            <div data-intro-reveal><span class="eyebrow">ABOUT THE CRUISE</span><h2>横浜を、<br>海の上から。</h2></div>
+            <div class="intro-copy" data-intro-reveal>
                 <p>日ノ出桟橋から大岡川を抜け、みなとみらいへ。赤レンガ倉庫やベイブリッジ、ランドマークタワーなど、横浜を代表する景色を水上から楽しめます。</p>
                 <p>1組2〜5名の貸切で、運航は60分。おひとりでも2名分の料金でご利用いただけます。愛犬と一緒に楽しめるプランや、みなとみらいの灯りを眺めるナイトクルーズもご用意しています。</p>
             </div>
@@ -63,16 +63,10 @@ $plans = function_exists('c365_plans') ? c365_plans() : array();
         <div class="container faq-layout">
             <div><span class="eyebrow">FAQ</span><h2>よくあるご質問</h2></div>
             <div class="faq-list">
-                <?php foreach (array(
-                    '1名でも利用できますか？' => 'はい。おひとりでも2名分の料金でご利用いただけます。1組の乗船人数は最大5名です。',
-                    '子どもは乗船できますか？' => '小学生以上（6歳以上）のお子さまはご乗船いただけます。1組につき最大5名です。',
-                    '愛犬と一緒に乗船できますか？' => 'ドッグクルーズ2プランで同乗いただけます。ケージ・バッグまたはリードをご用意いただき、マナーパンツを着用してください。',
-                    'どんな服装で行けばよいですか？' => '波しぶきがかかることがあります。濡れてもよい服装と防寒着をご用意ください。人用のライフジャケットは料金に含まれます。',
-                    '天候が悪い場合はどうなりますか？' => '天候や海況により中止する場合は、前日18時までにご連絡します。主催者都合による中止の場合、キャンセル料はかかりません。',
-                ) as $question => $answer) : ?>
+                <?php foreach (cruise_faq_items() as $question => $answer) : ?>
                     <details><summary><?php echo esc_html($question); ?><i aria-hidden="true">+</i></summary><p><?php echo esc_html($answer); ?></p></details>
                 <?php endforeach; ?>
-                <a class="text-link" href="<?php echo esc_url(home_url('/contact/')); ?>">お問い合わせ <?php echo cruise_icon('arrow'); ?></a>
+                <a class="text-link" href="<?php echo esc_url(cruise_page_url('contact')); ?>">お問い合わせ <?php echo cruise_icon('arrow'); ?></a>
             </div>
         </div>
     </section>

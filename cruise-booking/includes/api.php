@@ -48,7 +48,10 @@ function c365_api_quote($request) {
     $event = absint($request->get_param('event'));
     $quote = c365_price($event);
     if (is_wp_error($quote)) { return $quote; }
-    $quote['available'] = c365_site_ready() && c365_available($event);
+    $plan = (int) get_post_meta($event, '_c365_plan', true);
+    $accepting = c365_plan_accepts_bookings($plan);
+    $quote['full'] = $accepting && !c365_available($event);
+    $quote['available'] = $accepting && !$quote['full'];
     return c365_api_response($quote);
 }
 function c365_api_reserve($request) {
@@ -82,15 +85,19 @@ function c365_api_reserve($request) {
             if (!hash_equals($existing->token_hash,$hash)) { return c365_error('request','予約識別子が一致しません。',403); }
             return c365_api_response(c365_public_booking($existing));
         }
-        c365_expire_holds($event);
         $price = c365_price($event);
         if (is_wp_error($price)) { return $price; }
+        $plan = (int) get_post_meta($event, '_c365_plan', true);
+        if (c365_plan_booking_mode($plan) === 'jalan') {
+            return c365_error('not_open', 'このプランはじゃらんの掲載ページからお申し込みください。', 503);
+        }
+        c365_expire_holds($event);
         $total = $price['amount'];
         if (($d['expected_amount'] ?? null) !== $total) {
             return c365_error('price_changed', '料金が変わりました。貸切料金を確認してください。', 409);
         }
         if (!c365_available($event)) {
-            return c365_error('full', '選択した出航枠は受付できません。別の時間をお選びください。', 409);
+            return c365_error('full', '選択した出航枠は満席です。別の時間をお選びください。', 409);
         }
 
         $now = gmdate('Y-m-d H:i:s');

@@ -54,7 +54,7 @@ function c365_admin_settings(){
     foreach(array('sender_email'=>'Microsoft 365送信元メールアドレス','from_email'=>'Fromアドレス（任意）','phone'=>'電話番号','responsible_person'=>'運営責任者の氏名') as $key=>$label){echo '<label>'.esc_html($label).'<input type="'.(in_array($key,array('sender_email','from_email'),true)?'email':'text').'" name="'.esc_attr($key).'" value="'.esc_attr($s[$key]??($key==='responsible_person'?'平丸聖弥':'')).'"></label>';}
     echo '<p>Fromは受信者に表示される差出人アドレスです。空欄の場合は送信元メールアドレスのまま送信します。指定したアドレスから送信できるよう、Exchange Online側の権限・設定をご確認ください。</p>';
     echo '<label>お問い合わせ受信先<input type="email" name="contact_email" required value="'.esc_attr(c365_contact_email()).'"></label>';
-    echo '<p>キャンセル条件：'.esc_html(c365_policy_text()).'</p>';submit_button('設定を保存');echo '</form></div><div class="vc-admin-form"><h2>初回コンテンツ登録</h2><p>3プラン・お問い合わせ・プライバシーポリシー・キャンセル規定・特商法表記・会社概要・登録と安全情報のページを作成します。同じURLの既存コンテンツは上書きしません。</p>';c365_admin_form_start('import');submit_button('3プランと固定ページを登録','secondary');echo '</form></div><div class="vc-admin-form"><h2>Microsoft 365 テストメール</h2>';c365_admin_form_start('test_mail');echo '<p>'.esc_html(c365_contact_email()).' 宛てのテストメールを1通キューへ登録します。</p>';submit_button('テストメールを登録','secondary');echo '</form></div></div>';
+    echo '<p>キャンセル条件：'.esc_html(c365_policy_text()).'</p>';submit_button('設定を保存');echo '</form></div><div class="vc-admin-form"><h2>Microsoft 365 テストメール</h2>';c365_admin_form_start('test_mail');echo '<p>'.esc_html(c365_contact_email()).' 宛てのテストメールを1通キューへ登録します。</p>';submit_button('テストメールを登録','secondary');echo '</form></div></div>';
 }
 function c365_admin_mail(){
     global $wpdb;c365_admin_header('C365クルーズ メール送信状況');
@@ -89,7 +89,6 @@ function c365_admin_action(){
             update_option('c365_settings', $settings, false);
             $notice = '設定を保存しました。認証情報はテストで確認してください。';
         }
-    }elseif($action==='import'){$ids=c365_import_launch_events();c365_import_pages();flush_rewrite_rules();$notice=count($ids).'プランと固定ページを登録・確認しました。';
     }elseif($action==='message'){
         if(($_POST['confirm']??'')!=='yes'||!$event){wp_die('送信対象を確認してください。');}
         $subject=sanitize_text_field(wp_unslash($_POST['subject']??''));$body=sanitize_textarea_field(wp_unslash($_POST['message']??''));$batch=sanitize_text_field(wp_unslash($_POST['batch']??''));
@@ -138,6 +137,6 @@ function c365_admin_action(){
         }
     }
     set_transient('c365_notice_'.get_current_user_id(),$notice,120);
-    $page=in_array($action,array('settings','import','test_mail'),true)?'cruise-settings':(in_array($action,array('process_mail','retry_mail'),true)?'cruise-mail':'cruise-bookings');
+    $page=in_array($action,array('settings','test_mail'),true)?'cruise-settings':(in_array($action,array('process_mail','retry_mail'),true)?'cruise-mail':'cruise-bookings');
     wp_safe_redirect(add_query_arg(array('page'=>$page,'c365_notice'=>1,'event'=>$event),admin_url('admin.php')));exit;
 }

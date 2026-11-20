@@ -13,10 +13,19 @@ function cruise_setup() {
 }
 add_action('after_setup_theme', 'cruise_setup');
 function cruise_assets() {
-    wp_enqueue_style('cruise', get_stylesheet_uri(), array(), wp_get_theme()->get('Version'));
-    wp_enqueue_script('cruise', get_template_directory_uri() . '/assets/main.js', array(), '1.0.0', true);
+    $version = wp_get_theme()->get('Version');
+    wp_enqueue_style('cruise', get_stylesheet_uri(), array(), $version);
+    wp_enqueue_script('cruise', get_template_directory_uri() . '/assets/main.js', array(), $version, true);
 }
 add_action('wp_enqueue_scripts', 'cruise_assets');
+function cruise_favicon_url() {
+    return get_site_icon_url(192) ?: get_template_directory_uri() . '/assets/c365-cruise-favicon.png';
+}
+add_action('wp_head', function () {
+    if (!has_site_icon()) {
+        echo '<link rel="icon" type="image/png" sizes="192x192" href="' . esc_url(cruise_favicon_url()) . '">' . "\n";
+    }
+});
 add_action('customize_register', function ($customizer) {
     $customizer->add_section('cruise_options', array('title' => 'クルーズ設定', 'priority' => 30));
     $customizer->add_setting('cruise_hero', array('sanitize_callback' => 'esc_url_raw'));
@@ -30,7 +39,12 @@ function cruise_icon($name, $class = '') {
 }
 function cruise_brand() {
     if (has_custom_logo()) { the_custom_logo(); return; }
-    echo '<a class="brand" href="' . esc_url(home_url('/')) . '" aria-label="C365クルーズ ホーム"><span>C365 CRUISE<small>YOKOHAMA MINATOMIRAI</small></span></a>';
+    $logo = get_template_directory_uri() . '/assets/c365-cruise-logo.png';
+    echo '<a class="brand" href="' . esc_url(home_url('/')) . '"><img width="1000" height="333" src="' . esc_url($logo) . '" alt="C365クルーズ ホーム"></a>';
+}
+function cruise_page_url($slug) {
+    $page = get_page_by_path($slug);
+    return $page ? get_permalink($page) : home_url('/' . $slug . '/');
 }
 function cruise_event_image($id) {
     if ($id && has_post_thumbnail($id)) { return get_the_post_thumbnail_url($id, 'large'); }
@@ -40,10 +54,24 @@ function cruise_event_image($id) {
 }
 
 function cruise_plan_price_label($plan) {
-    $direct = function_exists('c365_site_ready') && c365_site_ready();
+    $direct = function_exists('c365_plan_accepts_bookings')
+        ? c365_plan_accepts_bookings($plan)
+        : (function_exists('c365_site_ready') && c365_site_ready());
     $price_key = $direct ? '_c365_charter_price' : '_c365_jalan_price';
     $price = (int) get_post_meta($plan, $price_key, true);
     if (!$price) { return '料金はお問い合わせください'; }
     $amount = '1組 ' . number_format_i18n($price) . '円';
     return $direct ? $amount . '（税込）' : 'じゃらん掲載 ' . $amount . '〜';
+}
+
+function cruise_faq_items() {
+    return array(
+        '横浜・みなとみらいの貸切クルーズは何分ですか？' => '運航は60分です。日ノ出桟橋から大岡川を抜け、みなとみらいへ向かいます。',
+        'クルーズの集合場所はどこですか？' => '出航30分前までにC365（神奈川県横浜市中区福富町西通44-2）へお越しください。京急 日ノ出町駅から徒歩5分、JR 桜木町駅から徒歩10分です。',
+        '1名でも利用できますか？' => 'はい。おひとりでも2名分の料金でご利用いただけます。1組の乗船人数は最大5名です。',
+        '子どもは乗船できますか？' => '小学生以上（6歳以上）のお子さまはご乗船いただけます。1組につき最大5名です。',
+        '愛犬と一緒に乗船できますか？' => 'ドッグクルーズ2プランで同乗いただけます。ケージ・バッグまたはリードをご用意いただき、マナーパンツを着用してください。',
+        'どんな服装で行けばよいですか？' => '波しぶきがかかることがあります。濡れてもよい服装と防寒着をご用意ください。人用のライフジャケットは料金に含まれます。',
+        '天候が悪い場合はどうなりますか？' => '天候や海況により中止する場合は、前日18時までにご連絡します。主催者都合による中止の場合、キャンセル料はかかりません。',
+    );
 }
