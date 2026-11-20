@@ -79,6 +79,9 @@ function c365_booking_notice($r) {
     $title = c365_departure_title($r->event_id);
     $start = strtotime($r->departure_at . ' UTC');
     $payment = $r->payment_method === 'cash' ? '当日現地決済' : 'Square事前決済完了';
+    $test = $r->payment_method === 'square' && $r->square_mode === 'sandbox';
+    if ($test) { $payment = 'Square Sandboxテスト決済完了（請求なし）'; }
+    $subject_label = $test ? '【テスト予約】' : '';
     $body = implode("\n", array(
         $r->customer_name . ' 様', '', 'C365クルーズのご予約ありがとうございます。', '',
         '予約番号：' . $r->public_id,
@@ -93,6 +96,6 @@ function c365_booking_notice($r) {
         'お問い合わせ：' . c365_contact_email(),
         get_permalink($plan), '', '株式会社NEXUS / C365クルーズ',
     ));
-    c365_queue_mail($r->email, '【C365クルーズ】ご予約確認：' . $title, $body, 'confirm_' . $r->public_id, $r->id);
-    c365_queue_mail(c365_contact_email(), '【C365クルーズ運営】新しい予約：' . $title, $body, 'admin_confirm_' . $r->public_id, $r->id);
+    c365_queue_mail($r->email, $subject_label . '【C365クルーズ】ご予約確認：' . $title, $body, 'confirm_' . $r->public_id, $r->id);
+    c365_queue_mail(c365_contact_email(), $subject_label . '【C365クルーズ運営】新しい予約：' . $title, $body, 'admin_confirm_' . $r->public_id, $r->id);
 }

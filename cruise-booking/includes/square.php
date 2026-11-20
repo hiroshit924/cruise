@@ -23,12 +23,8 @@ function c365_square_configuration_issues($mode) {
     }
     return $issues;
 }
-function c365_square_sandbox_blocked($mode) {
-    return $mode === 'sandbox' && wp_get_environment_type() === 'production';
-}
 function c365_square_ready() {
-    $mode = c365_square_mode();
-    return !c365_square_sandbox_blocked($mode) && !c365_square_configuration_issues($mode);
+    return !c365_square_configuration_issues(c365_square_mode());
 }
 function c365_square_update_fields($settings,$data) {
     foreach(array('sandbox','production') as $mode){

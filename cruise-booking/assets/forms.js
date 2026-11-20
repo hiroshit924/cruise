@@ -44,12 +44,17 @@
      if (!['paid','reserved'].includes(r.status)) return false;
      form.querySelectorAll('input,select,button').forEach(el=>el.disabled=true);
      reconcile.hidden=true; submit.hidden=true; result.hidden=false;
-     const payment = r.payment_method === 'cash'
+     const test = r.payment_method === 'square' && r.square_mode === 'sandbox';
+     let payment = r.payment_method === 'cash'
        ? t('当日現地決済。当日会場でお支払いください。', 'Pay at the meeting point on the day.')
        : t('事前カード決済完了', 'Advance card payment complete.');
+     if (test) payment = t('Sandboxテスト決済完了（請求なし）', 'Sandbox test payment complete. No charge.');
+     const heading = test
+       ? t('テスト予約が確定しました。', 'Your test booking is confirmed.')
+       : t('ご予約が確定しました。', 'Your booking is confirmed.');
      result.textContent = english
-       ? `Your booking is confirmed.\nBooking number: ${r.id}\nCharter price: ${money(r.amount)}\nPayment: ${payment}\n\nPlease keep your booking number. A confirmation email has been queued.`
-       : `ご予約が確定しました。\n予約番号：${r.id}\n貸切料金：${money(r.amount)}\nお支払い：${payment}\n\n確認メールの送信を手配しました。予約番号をお控えください。`;
+       ? `${heading}\nBooking number: ${r.id}\nCharter price: ${money(r.amount)}\nPayment: ${payment}\n\nPlease keep your booking number. A confirmation email has been queued.`
+       : `${heading}\n予約番号：${r.id}\n貸切料金：${money(r.amount)}\nお支払い：${payment}\n\n確認メールの送信を手配しました。予約番号をお控えください。`;
      message(''); state.status=r.status;save();return true;
    }
    let available = false;

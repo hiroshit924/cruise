@@ -134,4 +134,11 @@ function c365_available($event) {
     return !$conflict && !$wpdb->last_error;
 }
 function c365_booking($id) { global $wpdb; return $wpdb->get_row($wpdb->prepare('SELECT * FROM ' . c365_table() . ' WHERE id=%d', $id)); }
-function c365_public_booking($r) { return array('id' => $r->public_id, 'status' => $r->status, 'amount' => (int) $r->amount, 'payment_method' => $r->payment_method, 'expires_at' => $r->expires_at ? $r->expires_at . 'Z' : null); }
+function c365_public_booking($r) {
+    return array(
+        'id' => $r->public_id, 'status' => $r->status, 'amount' => (int) $r->amount,
+        'payment_method' => $r->payment_method,
+        'square_mode' => $r->payment_method === 'square' ? $r->square_mode : null,
+        'expires_at' => $r->expires_at ? $r->expires_at . 'Z' : null,
+    );
+}

@@ -43,12 +43,11 @@ function c365_admin_settings(){
     $mode = c365_square_mode();
     $mode_label = $mode === 'sandbox' ? 'Sandbox（テスト専用）' : 'Production（本番）';
     $issues = c365_square_configuration_issues($mode);
-    $sandbox_blocked = c365_square_sandbox_blocked($mode);
     $square_status = $issues ? '設定を確認してください' : '設定済み（実通信テストは別途必要）';
     echo '<div class="vc-admin-form"><h2>接続状況（設定の有無）</h2><p>Square認証情報（保存済みの環境：'
         . esc_html($mode_label) . '）：' . esc_html($square_status) . '</p>';
-    if ($sandbox_blocked) {
-        echo '<p>WordPressが本番環境のため、Sandboxカード決済は無効です。Sandbox決済を試すにはステージング環境をご利用ください。</p>';
+    if ($mode === 'sandbox') {
+        echo '<p>SandboxではSquareのテストカードを使用します。実際の請求は発生しません。テスト予約はこのサイトの出航枠を使用するので、検証後は予約一覧から取り消してください。</p>';
     }
     if ($issues) {
         echo '<ul>';
