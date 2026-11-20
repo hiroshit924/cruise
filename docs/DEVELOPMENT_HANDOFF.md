@@ -21,8 +21,8 @@ WordPress テーマは `cruise-theme/`、予約・管理機能は `cruise-bookin
 新しい Codex 環境でリポジトリを開いてから次を実行します。
 
 ```sh
-git fetch origin
-git switch --track origin/handoff/2026-11-20
+git fetch origin refs/heads/handoff/2026-11-20
+git switch -c handoff/2026-11-20 FETCH_HEAD
 git rev-parse HEAD
 scripts/start-local.sh
 ```
