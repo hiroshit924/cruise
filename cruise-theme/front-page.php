@@ -8,8 +8,8 @@ $plans = function_exists('c365_plans') ? c365_plans() : array();
     <section class="hero" aria-labelledby="hero-title">
         <div class="hero-content">
             <p class="hero-kicker"><span class="little-line" aria-hidden="true"></span> YOKOHAMA MINATO MIRAI</p>
-            <h1 id="hero-title"><?php cruise_output('横浜・みなとみらい', 'A private cruise'); ?><br><em><?php cruise_output('貸切クルーズ', 'in Yokohama'); ?></em></h1>
-            <p class="hero-description"><?php cruise_output('海から眺める、横浜の景色を貸切の船で。', 'See Minato Mirai from the water on a private boat.'); ?><br><?php cruise_output('ご家族やご友人、愛犬と過ごす60分。', 'Spend 60 minutes on the bay with family, friends or your dog.'); ?></p>
+            <h1 id="hero-title"><?php cruise_output('今日は、', 'A private cruise'); ?><br><em><?php cruise_output('横浜を貸し切ろう。', 'in Yokohama'); ?></em></h1>
+            <p class="hero-description"><?php cruise_output('横浜・みなとみらいの貸切クルーズ。', 'See Minato Mirai from the water on a private boat.'); ?><br><?php cruise_output('家族や友人、愛犬と、海から眺める横浜を楽しむ60分。', 'Spend 60 minutes on the bay with family, friends or your dog.'); ?></p>
             <a class="button hero-button" href="#events"><?php cruise_output('クルーズプランを見る', 'Explore cruises'); ?> <?php echo cruise_icon('arrow'); ?></a>
         </div>
         <div class="hero-visual">
