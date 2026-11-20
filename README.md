@@ -44,7 +44,7 @@ VINCROSS の既存イベントと固定ページを保持するため、クル�
 | Square Production | `C365_SQUARE_PRODUCTION_TOKEN`、`C365_SQUARE_PRODUCTION_WEBHOOK_KEY` |
 | Microsoft 365 | `C365_M365_TENANT_ID`、`C365_M365_CLIENT_ID`、`C365_M365_CLIENT_SECRET` |
 
-「接続・受付設定」で Sandbox を選んで保存すると、WordPress の環境種別にかかわらず Square Sandbox のテストカードを使用できます。Sandbox の予約は出航枠を使用するため、検証後は予約一覧から取り消します。Microsoft 365 は VINCROSS と同様に Graph の `Mail.Send` を持つアプリを構成し、実際に利用するメールボックスへ送信権限を付与します。「Microsoft 365 テストメール」で実際の受信箱まで確認してください。送信キューの処理には WordPress cron を使用します。
+「接続・受付設定」で Sandbox を選んで保存すると、WordPress の環境種別にかかわらず Square Sandbox のテストカードを使用できます。Sandbox の予約は出航枠を使用するため、検証後は予約一覧で対象のテスト予約を個別に削除できます。Microsoft 365 は VINCROSS と同様に Graph の `Mail.Send` を持つアプリを構成し、実際に利用するメールボックスへ送信権限を付与します。「Microsoft 365 テストメール」で実際の受信箱まで確認してください。送信キューの処理には WordPress cron を使用します。
 
 送信元メールボックスとは別に受信者へ表示するアドレスを指定するには、「接続・受付設定」の「Fromアドレス（任意）」に入力します。空欄なら送信元のアドレスを使います。別アドレスを指定する場合は、Exchange Online側でそのアドレスからの送信が許可されていることを確認し、テストメールの受信時に実際のFromを確認してください。 [Microsoft Graph の差出人設定](https://learn.microsoft.com/ja-jp/graph/outlook-send-mail-from-other-user)
 

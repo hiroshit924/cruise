@@ -20,20 +20,47 @@ function c365_admin_bookings() {
         $totals=$wpdb->get_row($wpdb->prepare('SELECT COALESCE(SUM(passenger_count),0) AS passengers,COUNT(*) AS bookings FROM '.c365_table()." WHERE event_id=%d AND status IN ('reserved','paid')",$event->ID));$available=c365_available($event->ID);
         echo '<a class="vc-admin-card" href="'.esc_url(admin_url('admin.php?page=cruise-bookings&event='.$event->ID)).'"><h3>'.esc_html(c365_date('n/j（D） H:i',c365_event_time($event->ID))).'</h3><strong>'.esc_html(c365_departure_title($event->ID)).'</strong><p>確定：'.esc_html($totals->bookings).'組・'.esc_html($totals->passengers).'名<br>空き状況：'.($available?'空きあり':'受付不可').'</p></a>';
     }echo '</div>';
-    echo '<form method="get"><input type="hidden" name="page" value="cruise-bookings"><label>出航枠を選択 <select name="event"><option value="0">すべて</option>';foreach($events as $event){echo '<option value="'.esc_attr($event->ID).'" '.selected($selected,$event->ID,false).'>'.esc_html(c365_date('n/j H:i',c365_event_time($event->ID)).' '.c365_departure_title($event->ID)).'</option>';}echo '</select></label> <button class="button">表示</button></form>';
-    $page=max(1,isset($_GET['paged'])?absint($_GET['paged']):1);$where=$selected?$wpdb->prepare(' WHERE event_id=%d',$selected):'';
+    $lookup = isset($_GET['booking_number']) && is_string($_GET['booking_number'])
+        ? sanitize_text_field(wp_unslash($_GET['booking_number'])) : '';
+    echo '<form method="get"><input type="hidden" name="page" value="cruise-bookings">';
+    echo '<label>出航枠を選択 <select name="event"><option value="0">すべて</option>';
+    foreach ($events as $event) {
+        echo '<option value="'.esc_attr($event->ID).'" '.selected($selected,$event->ID,false).'>'.esc_html(c365_date('n/j H:i',c365_event_time($event->ID)).' '.c365_departure_title($event->ID)).'</option>';
+    }
+    echo '</select></label> <label>予約番号 <input type="search" name="booking_number" placeholder="C365-000123" value="' . esc_attr($lookup) . '"></label> <button class="button">検索</button></form>';
+    $page = max(1, isset($_GET['paged']) ? absint($_GET['paged']) : 1);
+    $where = " WHERE status<>'sandbox_deleted'";
+    if ($selected) { $where .= $wpdb->prepare(' AND event_id=%d', $selected); }
+    if (preg_match('/^(?:C365-)?([0-9]{1,20})$/iD', $lookup, $matches)) {
+        $where .= $wpdb->prepare(' AND id=CAST(%s AS UNSIGNED)', $matches[1]);
+    } elseif (wp_is_uuid($lookup)) {
+        $where .= $wpdb->prepare(' AND public_id=%s', $lookup);
+    } elseif ($lookup !== '') {
+        $where .= ' AND 1=0';
+    }
     $total=(int)$wpdb->get_var('SELECT COUNT(*) FROM '.c365_table().$where);
     $rows=$wpdb->get_results($wpdb->prepare('SELECT * FROM '.c365_table().$where.' ORDER BY id DESC LIMIT %d OFFSET %d',50,($page-1)*50));
     echo '<h2>予約一覧（'.esc_html($total).'件）</h2><div class="vc-admin-table"><table class="widefat striped"><thead><tr><th>予約・出航枠</th><th>代表者・連絡先</th><th>乗船人数</th><th>合計・決済</th><th>状態</th><th>操作</th></tr></thead><tbody>';
     foreach($rows as $r){
-        echo '<tr><td><code>'.esc_html($r->public_id).'</code><br>'.esc_html(c365_departure_title($r->event_id)).'<br><small>'.esc_html(c365_date('Y-m-d H:i',strtotime($r->departure_at.' UTC'))).'</small></td><td>'.esc_html($r->customer_name).'<br><a href="'.esc_url('mailto:'.$r->email).'">'.esc_html($r->email).'</a><br>'.esc_html($r->phone).'</td><td>'.esc_html($r->passenger_count).'名</td><td>'.esc_html(number_format($r->amount)).'円<br>'.esc_html($r->payment_method==='cash'?'当日現地決済':'Square '.$r->square_mode).($r->cancellation_fee?'<br>取消料：'.esc_html(number_format($r->cancellation_fee)).'円':'').'<br><small>'.esc_html($r->payment_id).'</small></td><td class="vc-status">'.esc_html(c365_status_label($r->status)).'<br><small>'.esc_html($r->refund_status).'</small></td><td><a class="button" href="'.esc_url(admin_url('admin.php?page=cruise-bookings&event='.$r->event_id.'&booking='.$r->id.'#vc-compose')).'">個別メッセージ</a>';
+        echo '<tr><td><code>'.esc_html(c365_booking_number($r)).'</code><br>'.esc_html(c365_departure_title($r->event_id)).'<br><small>'.esc_html(c365_date('Y-m-d H:i',strtotime($r->departure_at.' UTC'))).'</small></td><td>'.esc_html($r->customer_name).'<br><a href="'.esc_url('mailto:'.$r->email).'">'.esc_html($r->email).'</a><br>'.esc_html($r->phone).'</td><td>'.esc_html($r->passenger_count).'名</td><td>'.esc_html(number_format($r->amount)).'円<br>'.esc_html($r->payment_method==='cash'?'当日現地決済':(c365_is_sandbox_booking($r) ? 'Square Sandbox（テスト）' : 'Square '.$r->square_mode)).($r->cancellation_fee?'<br>取消料：'.esc_html(number_format($r->cancellation_fee)).'円':'').'<br><small>'.esc_html($r->payment_id).'</small></td><td class="vc-status">'.esc_html(c365_status_label($r->status)).'<br><small>'.esc_html($r->refund_status).'</small></td><td><a class="button" href="'.esc_url(admin_url('admin.php?page=cruise-bookings&event='.$r->event_id.'&booking='.$r->id.'#vc-compose')).'">個別メッセージ</a>';
         if($r->status==='reserved'&&$r->payment_method==='cash'){c365_admin_form_start('cash_paid');echo '<input type="hidden" name="booking" value="'.esc_attr($r->id).'">';submit_button('現地入金を記録','small','submit',false);echo '</form>';}
         if(in_array($r->status,array('payment_processing','pending_payment'),true)&&$r->payment_method==='square'){c365_admin_form_start('reconcile');echo '<input type="hidden" name="booking" value="'.esc_attr($r->id).'">';submit_button('Square照合','small','submit',false);echo '</form>';}
         if(in_array($r->status,array('reserved','paid','pending_payment','refund_pending'),true)){
             c365_admin_form_start('cancel');echo '<input type="hidden" name="booking" value="'.esc_attr($r->id).'"><select name="reason"><option value="customer">お客様からの申出</option><option value="no_show">無連絡キャンセル</option><option value="organizer">主催者都合（全額返金）</option></select><br><label>取消連絡の受信日時（日本時間）<input type="datetime-local" name="cancel_received_at"></label><label><input type="checkbox" name="confirm" value="yes" required> 取消・返金条件を確認済み</label>';submit_button('取消・必要な返金','small','submit',false);echo '</form>';
-        }echo '</td></tr>';
-    }echo '</tbody></table></div>';echo wp_kses_post(paginate_links(array('base'=>add_query_arg('paged','%#%'),'format'=>'','current'=>$page,'total'=>max(1,(int)ceil($total/50)))));
-    if($selected){$target=isset($_GET['booking'])?absint($_GET['booking']):0;$r=$target?c365_booking($target):null;if($r&&(int)$r->event_id!==$selected){$r=null;$target=0;}
+        }
+        if (c365_is_sandbox_booking($r)) {
+            c365_admin_form_start('delete_sandbox');
+            echo '<input type="hidden" name="booking" value="' . esc_attr($r->id) . '">';
+            echo '<input type="hidden" name="event" value="' . esc_attr($selected) . '">';
+            echo '<label><input type="checkbox" name="confirm" value="yes" required> このテスト予約を削除する</label>';
+            submit_button('テスト予約を削除', 'small', 'submit', false);
+            echo '</form>';
+        }
+        echo '</td></tr>';
+    }
+    if (!$rows) { echo '<tr><td colspan="6">該当する予約はありません。</td></tr>'; }
+    echo '</tbody></table></div>';echo wp_kses_post(paginate_links(array('base'=>add_query_arg('paged','%#%'),'format'=>'','current'=>$page,'total'=>max(1,(int)ceil($total/50)))));
+    if($selected){$target=isset($_GET['booking'])?absint($_GET['booking']):0;$r=$target?c365_booking($target):null;if($r&&((int)$r->event_id!==$selected||$r->status==='sandbox_deleted')){$r=null;$target=0;}
         echo '<div class="vc-admin-form" id="vc-compose"><h2>'.($r?esc_html($r->customer_name).'様へ個別送信':'この出航枠の予約代表者へ一斉送信').'</h2><p>メールは代表者ごとに個別配送され、他の予約者のアドレスは公開されません。同行者への共有は代表者にご依頼ください。</p>';c365_admin_form_start('message');echo '<input type="hidden" name="event" value="'.esc_attr($selected).'"><input type="hidden" name="booking" value="'.esc_attr($target).'"><input type="hidden" name="batch" value="'.esc_attr(wp_generate_uuid4()).'"><label>件名<input name="subject" type="text" maxlength="180" required></label><label>本文<textarea name="message" rows="9" maxlength="10000" required></textarea></label><label><input type="checkbox" name="confirm" value="yes" required> 対象者・内容を確認して送信します</label>';submit_button('メール送信キューに登録');echo '</form></div>';
     }echo '</div>';
 }
@@ -47,7 +74,7 @@ function c365_admin_settings(){
     echo '<div class="vc-admin-form"><h2>接続状況（設定の有無）</h2><p>Square認証情報（保存済みの環境：'
         . esc_html($mode_label) . '）：' . esc_html($square_status) . '</p>';
     if ($mode === 'sandbox') {
-        echo '<p>SandboxではSquareのテストカードを使用します。実際の請求は発生しません。テスト予約はこのサイトの出航枠を使用するので、検証後は予約一覧から取り消してください。</p>';
+        echo '<p>SandboxではSquareのテストカードを使用します。実際の請求は発生しません。テスト予約はこのサイトの出航枠を使用するので、検証後は予約一覧からテスト予約を削除できます。</p>';
     }
     if ($issues) {
         echo '<ul>';
@@ -114,7 +141,11 @@ function c365_admin_action(){
     }elseif($action==='process_mail'){c365_process_mail_queue();$notice=c365_mail_ready()?'送信キューを処理しました。結果を一覧で確認してください。':'Microsoft 365の設定が不足しています。送信していません。';
     }elseif($action==='retry_mail'){
         if(($_POST['confirm']??'')!=='yes'){wp_die('未送信を確認してください。');}$id=absint($_POST['mail']??0);$wpdb->query($wpdb->prepare('UPDATE '.c365_table('mail')." SET status='pending',attempts=0,last_error='',available_at=%s WHERE id=%d AND status IN ('failed','uncertain')",gmdate('Y-m-d H:i:s'),$id));c365_audit('admin_mail_retry');
-    }elseif($r){
+    } elseif ($action === 'delete_sandbox') {
+        if (($_POST['confirm'] ?? '') !== 'yes') { wp_die('削除するテスト予約を確認してください。'); }
+        $result = c365_delete_sandbox_booking($booking);
+        $notice = is_wp_error($result) ? $result->get_error_message() : 'テスト予約を削除しました。';
+    }elseif($r && $r->status !== 'sandbox_deleted'){
         $event=(int)$r->event_id;
         if($action==='reconcile'){$res=c365_square_reconcile($r);$notice=is_wp_error($res)?$res->get_error_message():'Squareの決済状態を確認しました。';}
         elseif(in_array($action,array('cash_paid','cancel'),true)){
@@ -145,7 +176,7 @@ function c365_admin_action(){
                         if ($fee && $r->status !== 'paid') { $notice .= 'キャンセル料のお支払い方法は運営からご案内します。'; }
                     }
                     c365_audit($organizer?'organizer_cancelled':'customer_cancelled',$r->id);
-                    if(!isset($res)||!is_wp_error($res)){c365_queue_mail($r->email,'【C365クルーズ】キャンセルのお手続きについて', $r->customer_name." 様\n予約番号：".$r->public_id."\nプラン：".c365_departure_title($r->event_id)."\n\n".$notice."\nカードへの返金はカード会社の処理により反映まで日数がかかる場合があります。\n\n".c365_contact_email()." / C365クルーズ",'cancel_'.$r->public_id,$r->id);}
+                    if(!isset($res)||!is_wp_error($res)){c365_queue_mail($r->email,'【C365クルーズ】キャンセルのお手続きについて', $r->customer_name." 様\n予約番号：".c365_booking_number($r)."\nプラン：".c365_departure_title($r->event_id)."\n\n".$notice."\nカードへの返金はカード会社の処理により反映まで日数がかかる場合があります。\n\n".c365_contact_email()." / C365クルーズ",'cancel_'.$r->public_id,$r->id);}
                 }else{$notice='現在の予約状態では操作できません。Square処理中の場合は先に照合してください。';}
             }finally{c365_unlock();}
         }

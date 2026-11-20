@@ -10,6 +10,13 @@ add_action('wp_enqueue_scripts',function () {
         nocache_headers();
     }
 });
+add_filter('template_include', function ($template) {
+    if (is_singular('c365_plan') && isset($_GET['booking_complete'])) {
+        return C365_BOOKING_PATH . 'templates/booking-confirmation.php';
+    }
+    return $template;
+});
+
 function c365_form_page_url($slug) {
     $page = get_page_by_path($slug);
     return c365_local_url($page ? get_permalink($page) : home_url('/' . $slug . '/'));
@@ -166,8 +173,10 @@ function c365_booking_calendar($plan_url, $month, $first_month, $last_month, $se
 }
 
 function c365_booking_form($id) {
+    $plan = (int) get_post_meta($id, '_c365_plan', true);
+    $confirmation_url = add_query_arg('booking_complete', $id, c365_local_url(get_permalink($plan)));
     ob_start(); ?>
-    <form class="vc-form vc-booking-form" data-event="<?php echo esc_attr($id); ?>">
+    <form class="vc-form vc-booking-form" data-event="<?php echo esc_attr($id); ?>" data-confirmation-url="<?php echo esc_url($confirmation_url); ?>">
     <p class="vc-form-note"><?php c365_output('出航 ', 'Departure '); ?><?php echo esc_html(c365_booking_date_label(c365_event_time($id), true)); ?><?php c365_output('（日本時間）。30分前までにC365にお越しください。', ' (Japan Standard Time). Please arrive at C365 30 minutes early.'); ?></p>
     <label><?php c365_output('お名前', 'Full name'); ?> <b><?php c365_output('必須', 'Required'); ?></b><input name="name" autocomplete="name" maxlength="100" required></label>
     <label><?php c365_output('メールアドレス', 'Email address'); ?> <b><?php c365_output('必須', 'Required'); ?></b><input name="email" type="email" autocomplete="email" maxlength="254" required></label>
@@ -175,7 +184,7 @@ function c365_booking_form($id) {
     <label><?php c365_output('乗船人数', 'Passengers'); ?> <b><?php c365_output('必須', 'Required'); ?></b><input name="passenger_count" type="number" min="1" max="5" step="1" value="2" aria-describedby="cruise-passenger-note" required></label>
     <p id="cruise-passenger-note" class="vc-form-note"><?php c365_output('1組2〜5名。1名でのご利用は2名分の料金です。', 'The boat takes up to five passengers. A solo guest pays the same charter rate as two passengers.'); ?></p>
     <label class="vc-consent"><input type="checkbox" name="age_confirmed" required><span><?php c365_output('乗船する全員が小学生以上（6歳以上）です。', 'Everyone in the group is at least six years old and in elementary school or older.'); ?></span></label>
-    <div class="vc-quote" aria-live="polite"><?php c365_output('貸切料金を確認しています。', 'Checking the charter price…'); ?></div>
+    <div class="vc-quote vc-loading" aria-live="polite"><?php c365_output('貸切料金を確認しています。', 'Checking the charter price…'); ?></div>
     <fieldset><legend><?php c365_output('お支払い方法', 'Payment method'); ?></legend><label class="vc-radio"><input type="radio" name="method" value="cash" checked><?php c365_output('当日現地決済', 'Pay at the meeting point'); ?></label><label class="vc-radio"><input type="radio" name="method" value="square" <?php disabled(!c365_square_ready()); ?>><?php c365_output('事前カード決済（Square）', 'Pay by card in advance (Square)'); ?></label><?php if (!c365_square_ready()) : ?><small><?php c365_output('事前決済は接続設定後にご利用いただけます。', 'Advance card payment is currently unavailable.'); ?></small><?php endif; ?></fieldset>
     <div class="vc-card-section" hidden><?php if (c365_square_mode()==='sandbox') : ?><p class="vc-notice"><?php c365_output('テスト決済モード：実際のカードでは決済しないでください。', 'Test payment mode. Please do not enter a real card.'); ?></p><?php endif; ?><div class="vc-square-card"></div><p class="vc-form-note"><?php c365_output('カード情報はSquareが安全に処理し、当サイトでは保存しません。', 'Square processes your card details. This website does not store them.'); ?></p></div>
     <div class="vc-policy-note"><?php echo esc_html(c365_is_english() ? c365_english_cancellation_policy() : c365_policy_text()); ?></div>

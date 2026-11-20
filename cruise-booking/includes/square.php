@@ -75,6 +75,7 @@ function c365_square_apply_payment($payment, $mode) {
     if (!c365_lock()) { return false; }
     try {
         $r = c365_booking($r->id); $status = $payment['status'] ?? '';
+        if ($r->status === 'sandbox_deleted') { return true; }
         if ($r->payment_id && $r->payment_id !== $payment['id']) { return false; }
         // Out-of-order callbacks must never undo a completed payment/refund.
         if (in_array($r->status, array('paid','refund_pending','refunded','cancelled'), true)) { return true; }

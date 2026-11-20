@@ -117,3 +117,22 @@ a.vc-slot-option:hover,
 a.vc-slot-option[aria-current="true"] { background: #163b53; color: white; }
 .vc-slot-full { background: #f0f1f2; color: #626f78; }
 .vc-slot-full span { font-size: .85em; font-weight: 700; }
+
+.vc-loading::before {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    margin-inline-end: .5em;
+    border: 2px solid currentColor;
+    border-inline-end-color: transparent;
+    border-radius: 50%;
+    vertical-align: -.15em;
+    content: "";
+    animation: vc-spin .85s linear infinite;
+}
+@keyframes vc-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+    .vc-loading::before { animation: none; }
+}
+.vc-confirmation { max-width: 700px; min-height: 260px; margin-inline: auto; }
+.vc-confirmation-status:empty { display: none; }

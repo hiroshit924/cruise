@@ -207,7 +207,7 @@ function c365_may_edit($id, $field, $action) {
 
 function c365_has_reservations($event) {
     global $wpdb;
-    return (bool) $wpdb->get_var($wpdb->prepare('SELECT id FROM ' . c365_table() . ' WHERE event_id=%d LIMIT 1', $event));
+    return (bool) $wpdb->get_var($wpdb->prepare('SELECT id FROM ' . c365_table() . " WHERE event_id=%d AND status<>'sandbox_deleted' LIMIT 1", $event));
 }
 
 add_filter('pre_delete_post', function ($delete, $post) {

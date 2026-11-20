@@ -83,6 +83,7 @@ function c365_api_reserve($request) {
         $existing=$wpdb->get_row($wpdb->prepare('SELECT * FROM '.c365_table().' WHERE request_id=%s',$request_id));
         if ($existing) {
             if (!hash_equals($existing->token_hash,$hash)) { return c365_error('request','予約識別子が一致しません。',403); }
+            if ($existing->status === 'sandbox_deleted') { return c365_error('not_found','このテスト予約は削除済みです。',404); }
             return c365_api_response(c365_public_booking($existing));
         }
         $price = c365_price($event);
@@ -124,7 +125,7 @@ function c365_auth_booking($request) {
     $id=$request->get_param('id'); $token=$request->get_header('x-vc-booking-token');
     if (!is_string($id) || !is_string($token) || strlen($token)<32 || strlen($token)>128) { return c365_error('not_found','予約情報を確認できません。',404); }
     $r=$wpdb->get_row($wpdb->prepare('SELECT * FROM '.c365_table().' WHERE public_id=%s',$id));
-    if (!$r || !hash_equals($r->token_hash,hash_hmac('sha256',$token,wp_salt('auth')))) { return c365_error('not_found','予約情報を確認できません。',404); }
+    if (!$r || $r->status === 'sandbox_deleted' || !hash_equals($r->token_hash,hash_hmac('sha256',$token,wp_salt('auth')))) { return c365_error('not_found','予約情報を確認できません。',404); }
     return $r;
 }
 function c365_api_status($request) { $r=c365_auth_booking($request); if(is_wp_error($r)){return $r;} if($r->status==='pending_payment'){c365_expire_holds($r->event_id);$r=c365_booking($r->id);}return c365_api_response(c365_public_booking($r)); }

@@ -27,6 +27,9 @@
 <?php
 $on_plan = is_singular('c365_plan');
 $booking_url = $on_plan ? '#booking' : cruise_local_url(home_url('/')) . '#events';
+if ($on_plan && isset($_GET['booking_complete'])) {
+    $booking_url = cruise_local_url(get_permalink()) . '#booking';
+}
 $booking_label = $on_plan ? cruise_text('空き状況・予約', 'Availability & booking') : cruise_text('プランを選んで予約', 'Choose a cruise');
 ?>
 <a class="button cruise-booking-float" href="<?php echo esc_url($booking_url); ?>">

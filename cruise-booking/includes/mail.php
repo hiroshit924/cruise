@@ -7,7 +7,11 @@ function c365_queue_mail($to, $subject, $body, $batch, $booking = 0) {
     global $wpdb;
     if (!is_email($to)) { return false; }
     $now = gmdate('Y-m-d H:i:s');
-    $result = $wpdb->query($wpdb->prepare('INSERT IGNORE INTO ' . c365_table('mail') . ' (booking_id,batch_id,recipient,subject,body,status,attempts,last_error,available_at,created_at,updated_at) VALUES (%d,%s,%s,%s,%s,%s,0,%s,%s,%s,%s)', $booking, substr($batch,0,80), $to, sanitize_text_field($subject), $body, 'pending', '', $now, $now, $now));
+    $result = $wpdb->query($wpdb->prepare(
+        'INSERT IGNORE INTO ' . c365_table('mail') . ' (booking_id,batch_id,recipient,subject,body,status,attempts,last_error,available_at,created_at,updated_at) '
+        . "SELECT %d,%s,%s,%s,%s,%s,0,%s,%s,%s,%s WHERE NOT EXISTS (SELECT 1 FROM " . c365_table() . " WHERE id=%d AND status='sandbox_deleted')",
+        $booking, substr($batch,0,80), $to, sanitize_text_field($subject), $body, 'pending', '', $now, $now, $now, $booking
+    ));
     if ($result === false) { return false; }
     if ($result > 0) {
         if (!wp_next_scheduled('c365_process_mail_now')) { wp_schedule_single_event(time(), 'c365_process_mail_now'); }
@@ -49,10 +53,12 @@ function c365_graph_send($to, $subject, $body) {
     }
     return new WP_Error('delivery_rejected', 'Microsoft 365 が送信を受理しませんでした（HTTP ' . $status . '）');
 }
+function c365_mail_queue_lock_name() { return 'c365_mail_' . md5(c365_table()); }
+
 function c365_process_mail_queue() {
     global $wpdb;
     if (!c365_mail_ready()) { return; }
-    $lock = 'c365_mail_' . md5(c365_table());
+    $lock = c365_mail_queue_lock_name();
     if ((int) $wpdb->get_var($wpdb->prepare('SELECT GET_LOCK(%s,0)', $lock)) !== 1) { return; }
     try {
         $table = c365_table('mail');
@@ -84,7 +90,7 @@ function c365_booking_notice($r) {
     $subject_label = $test ? '【テスト予約】' : '';
     $body = implode("\n", array(
         $r->customer_name . ' 様', '', 'C365クルーズのご予約ありがとうございます。', '',
-        '予約番号：' . $r->public_id,
+        '予約番号：' . c365_booking_number($r),
         'プラン：' . $title,
         '出航：' . c365_date('Y年n月j日 H:i', $start) . '（日本時間）',
         '集合：' . c365_date('H:i', $start - 30 * MINUTE_IN_SECONDS) . 'までにC365（横浜市中区福富町西通44-2）',

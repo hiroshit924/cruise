@@ -33,7 +33,7 @@ add_action('wp_head', function () {
 }, 6);
 
 add_filter('wp_robots', function ($robots) {
-    if (is_singular('c365_plan') && (isset($_GET['booking_month']) || isset($_GET['booking_date']) || isset($_GET['departure']))) {
+    if (is_singular('c365_plan') && (isset($_GET['booking_month']) || isset($_GET['booking_date']) || isset($_GET['departure']) || isset($_GET['booking_complete']))) {
         $robots['noindex'] = true;
     }
     return $robots;

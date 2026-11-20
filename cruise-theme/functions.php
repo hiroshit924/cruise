@@ -60,7 +60,7 @@ function cruise_local_url($url) {
 
 function cruise_locale_switch() {
     $url = is_singular() ? get_permalink() : home_url('/');
-    foreach (array('booking_month', 'booking_date', 'departure') as $key) {
+    foreach (array('booking_month', 'booking_date', 'departure', 'booking_complete') as $key) {
         if (isset($_GET[$key]) && is_string($_GET[$key])) {
             $url = add_query_arg($key, urlencode(wp_unslash($_GET[$key])), $url);
         }

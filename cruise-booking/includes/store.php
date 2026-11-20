@@ -134,9 +134,52 @@ function c365_available($event) {
     return !$conflict && !$wpdb->last_error;
 }
 function c365_booking($id) { global $wpdb; return $wpdb->get_row($wpdb->prepare('SELECT * FROM ' . c365_table() . ' WHERE id=%d', $id)); }
+function c365_booking_number($booking) {
+    return 'C365-' . str_pad((string) $booking->id, 6, '0', STR_PAD_LEFT);
+}
+function c365_is_sandbox_booking($booking) {
+    return $booking && $booking->payment_method === 'square' && $booking->square_mode === 'sandbox';
+}
+function c365_delete_sandbox_booking($id) {
+    global $wpdb;
+    $busy = '処理が混み合っています。もう一度お試しください。';
+    if (!c365_lock()) { return new WP_Error('busy', $busy); }
+    try {
+        $booking = c365_booking($id);
+        if (!c365_is_sandbox_booking($booking)) {
+            return new WP_Error('not_sandbox', 'Square Sandboxのテスト予約のみ削除できます。');
+        }
+        if ($booking->status === 'sandbox_deleted') { return true; }
+        $mail_lock = c365_mail_queue_lock_name();
+        if ((int) $wpdb->get_var($wpdb->prepare('SELECT GET_LOCK(%s,0)', $mail_lock)) !== 1) {
+            return new WP_Error('busy', $busy);
+        }
+        try {
+            $error = new WP_Error('database', 'テスト予約を削除できませんでした。もう一度お試しください。');
+            if ($wpdb->query('START TRANSACTION') === false) { return $error; }
+            // Retain the request identifier so a delayed payment or retry cannot recreate the test booking.
+            $updated = $wpdb->update(c365_table(), array(
+                'status' => 'sandbox_deleted', 'customer_name' => '', 'email' => '', 'phone' => '',
+                'expires_at' => null, 'updated_at' => gmdate('Y-m-d H:i:s'),
+            ), array('id' => $id, 'payment_method' => 'square', 'square_mode' => 'sandbox'));
+            if ($updated !== 1 || $wpdb->delete(c365_table('mail'), array('booking_id' => $id)) === false
+                || $wpdb->query('COMMIT') === false) {
+                $wpdb->query('ROLLBACK');
+                return $error;
+            }
+        } finally {
+            $wpdb->get_var($wpdb->prepare('SELECT RELEASE_LOCK(%s)', $mail_lock));
+        }
+        c365_audit('sandbox_booking_deleted', $id);
+        return true;
+    } finally {
+        c365_unlock();
+    }
+}
 function c365_public_booking($r) {
     return array(
         'id' => $r->public_id, 'status' => $r->status, 'amount' => (int) $r->amount,
+        'booking_number' => c365_booking_number($r),
         'payment_method' => $r->payment_method,
         'square_mode' => $r->payment_method === 'square' ? $r->square_mode : null,
         'expires_at' => $r->expires_at ? $r->expires_at . 'Z' : null,
