@@ -3,7 +3,7 @@ Theme Name: C365 Cruise
 Theme URI: https://github.com/hiroshit924/cruise
 Author: C365
 Description: VINCROSSをベースにした横浜みなとみらい貸切クルーズのWordPressテーマ。
-Version: 1.0.5
+Version: 1.0.6
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
@@ -137,3 +137,24 @@ html[lang=en] .hero h1 { font-family: Georgia, serif; font-size: clamp(41px, 5.0
     .header-inner { gap: 13px; }
     .site-header .header-join { display: none; }
 }
+
+.cruise-booking-float {
+    position: fixed;
+    z-index: 9;
+    right: calc(clamp(12px, 2.5vw, 32px) + env(safe-area-inset-right));
+    bottom: calc(clamp(12px, 2.5vw, 32px) + env(safe-area-inset-bottom));
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .55rem;
+    min-height: 48px;
+    padding: .75rem 1rem;
+    border-radius: .35rem;
+    box-shadow: 0 4px 20px #071a2d44;
+    font-size: .875rem;
+}
+
+.cruise-booking-float .icon { flex: 0 0 18px; width: 18px; height: 18px; }
+.cruise-booking-float:focus-visible { outline: 3px solid #2989b5; outline-offset: 3px; }
+.site-footer { padding-bottom: calc(6rem + env(safe-area-inset-bottom)); }
+html { scroll-padding-bottom: calc(5rem + env(safe-area-inset-bottom)); }

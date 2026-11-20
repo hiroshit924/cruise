@@ -24,6 +24,15 @@
         <span>© <?php echo esc_html(wp_date('Y')); ?> C365 CRUISE / <?php cruise_output('株式会社NEXUS', 'NEXUS Co., Ltd.'); ?></span>
     </div>
 </footer>
+<?php
+$on_plan = is_singular('c365_plan');
+$booking_url = $on_plan ? '#booking' : cruise_local_url(home_url('/')) . '#events';
+$booking_label = $on_plan ? cruise_text('空き状況・予約', 'Availability & booking') : cruise_text('プランを選んで予約', 'Choose a cruise');
+?>
+<a class="button cruise-booking-float" href="<?php echo esc_url($booking_url); ?>">
+    <?php echo cruise_icon('calendar'); ?>
+    <span><?php echo esc_html($booking_label); ?></span>
+</a>
 <?php wp_footer(); ?>
 </body>
 </html>
